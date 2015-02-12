@@ -52,7 +52,7 @@ object Main {
     } ).outerJoinVertices(graph.inDegrees) { (vid, vdata, inDeg) => (vdata, inDeg.getOrElse(0))}
 
     var iteration = 0
-    var prevRankGraph: Graph[Double, Double] = null
+    var prevRankGraph: Graph[(Double, Int), Double] = null
     while (iteration < 5) {
       rankGraph.cache()
 
@@ -66,7 +66,7 @@ object Main {
       // edge partitions.
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => alpha + (1.0 - alpha) * msgSum
+        (id, oldRank, msgSum) => (alpha + (1.0 - alpha) * msgSum, oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
