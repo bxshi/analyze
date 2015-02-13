@@ -94,9 +94,9 @@ object Main {
 
     }
 
-    val finalRank = rankGraph.vertices.map(x => x._2).top(topK).map(y => (y._2, y._1)).toSeq
+    val finalRank = rankGraph.vertices.map(x => (x._2._1, x._1)).top(topK).map(y => (y._2, y._1)).toSeq
 
-    finalRank.indices.foreach(ind => println(ind, finalRank(ind)))
+    finalRank.indices.foreach(ind => println(ind + 1, finalRank(ind)))
 
     sc.stop()
   }
