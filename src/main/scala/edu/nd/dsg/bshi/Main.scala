@@ -8,7 +8,7 @@ import org.apache.spark.graphx._
 object Main {
 
   val alpha = 0.15
-  val queryId = 1l //1326293
+  val queryId = 1326293l
 
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
@@ -45,6 +45,7 @@ object Main {
       // Associate the degree with each vertex
       .outerJoinVertices(graph.outDegrees) { (vid, vdata, deg) => deg.getOrElse(0) }
       // Set the weight on the edges based on the degree
+//      .mapTriplets( e => 1.0, TripletFields.Src )
       .mapTriplets( e => 1.0 / e.srcAttr, TripletFields.Src )
       // Set the vertex attributes to the initial pagerank values
       .mapVertices( (id, attr) => {
@@ -53,7 +54,7 @@ object Main {
 
     var iteration = 0
     var prevRankGraph: Graph[(Double, Int), Double] = null
-    while (iteration < 5) {
+    while (iteration < 50) {
       rankGraph.cache()
 
       // Compute the outgoing rank contributions of each vertex, perform local preaggregation, and
@@ -66,7 +67,7 @@ object Main {
       // edge partitions.
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => (alpha + (1.0 - alpha) * msgSum, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == queryId) alpha * totalV else 0 ) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
@@ -83,9 +84,11 @@ object Main {
 //        }
 //      }
 
-      sc.parallelize(rankGraph.vertices.map(x => (x._2, x._1)).top(20)).saveAsTextFile("hdfs://dsg1.crc.nd.edu/user/bshi/dblp/005_"+iteration+"_top20")
 
     }
+
+    sc.parallelize(rankGraph.vertices.map(x => (x._2, x._1)).top(20)).saveAsTextFile("hdfs://dsg1.crc.nd.edu/user/bshi/dblp/personalized_015_"+iteration+"_top20")
+
 
     sc.stop()
   }
