@@ -109,10 +109,11 @@ object Main {
 
     val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
       val tmp = x.split("\",\"").toList
-      Map[Int, String]((tmp(0).replace("\"","").toInt, tmp(1)))
+      Map[Long, String]((tmp(0).replace("\"","").toLong, tmp(1).replace("\"","")))
     }).reduce(_++_)
 
-    finalRank.indices.foreach(ind => println(ind, finalRank(ind), titleMap.get(finalRank(ind)._1)))
+    println(("src", queryId, titleMap.getOrElse(queryId, "NO_TITLE")))
+    finalRank.indices.foreach(ind => println(ind, finalRank(ind)._1, finalRank(ind)._2, titleMap.getOrElse(finalRank(ind)._1, "NO_TITLE")))
 
 
   }
