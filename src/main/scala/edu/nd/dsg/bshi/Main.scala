@@ -55,6 +55,12 @@ object Main {
       "--Edges"+totalE,
       "--OutDeg==0:"+zeroDeg).foreach(println)
 
+    if(graph.vertices.filter(_._1 == queryId).count() == 0) {
+      println("QueryId ", queryId, " does not exist!")
+      sc.stop()
+      return
+    }
+
     var rankGraph: Graph[(Double, Int), Double] = graph
       // Associate the degree with each vertex
       .outerJoinVertices(graph.outDegrees) { (vid, vdata, deg) => deg.getOrElse(0) }
