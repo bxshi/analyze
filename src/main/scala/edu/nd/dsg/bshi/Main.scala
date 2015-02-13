@@ -1,7 +1,6 @@
 package edu.nd.dsg.bshi
 
-import org.apache.spark.graphx.lib.PageRank._
-import org.apache.spark.rdd.{PairRDDFunctions, RDD}
+import org.apache.spark.rdd.{RDD}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.graphx._
 
@@ -12,10 +11,11 @@ object Main {
   var filePath = ""
   var maxIter = 0
   var topK = 20
+  var titlePath = ""
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 5) {
-      println("usage: alpha queryId maxIter topK filePath")
+    if (args.length < 6) {
+      println("usage: alpha queryId maxIter topK edgeFilePath titleFilePath")
       return
     } else {
       alpha = args(0).toDouble
@@ -23,6 +23,7 @@ object Main {
       maxIter = args(2).toInt
       topK = args(3).toInt
       filePath = args(4)
+      titlePath = args(5)
     }
 
     val conf = new SparkConf()
@@ -92,7 +93,7 @@ object Main {
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
-      println(s"PageRank finished iteration $iteration.")
+      if (iteration % 5 == 0) println(s"PageRank finished iteration $iteration.")
       prevRankGraph.vertices.unpersist(false)
       prevRankGraph.edges.unpersist(false)
 
@@ -102,8 +103,17 @@ object Main {
 
     val finalRank = rankGraph.vertices.map(x => x._2).top(topK).map(y => (y._2, y._1)).toSeq
 
-    finalRank.indices.foreach(ind => println(ind, finalRank(ind)))
-
     sc.stop()
+
+    // Load article_list
+
+    val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
+      val tmp = x.split("\",\"").toList
+      Map[Int, String]((tmp(0).replace("\"","").toInt, tmp(1)))
+    }).reduce(_++_)
+
+    finalRank.indices.foreach(ind => println(ind, finalRank(ind), titleMap.get(finalRank(ind)._1)))
+
+
   }
 }
