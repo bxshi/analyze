@@ -28,6 +28,8 @@ object Main {
       titlePath = args(5)
     }
 
+    println(alpha, queryId, maxIter, topK, filePath, titlePath)
+
     val conf = new SparkConf()
       .setMaster("local[10]")
       .setAppName("Citation PageRank")
@@ -65,22 +67,23 @@ object Main {
     }
 
 
-    val prRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha).vertices.map(x => x._2).top(topK).map(y => (y._2, y._1)).toSeq
+    val prRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha).vertices.map(x => (x._2._1, x._1)).top(topK).map(y => (y._2, y._1)).toSeq
+
+    prRank.foreach(println)
 
     var rprRank: Seq[(Int, (Int, Double))] = Seq.empty
 
     // TODO: Early stop based on year
     for(testId <- prRank.map(_._1)) {
+      println("test testId",testId)
       val tmpRank = CitPageRank.revPageRank(graph, testId, maxIter, alpha)
-      val revRank = tmpRank.vertices.map(x => x._2).top(topK * 100).map(y => (y._2, y._1)).toSeq
+      val revRank = tmpRank.vertices.map(x => (x._2._1, x._1)).top(totalV.toInt).map(y => (y._2.toInt, y._1)).toSeq
 
       tmpRank.vertices.filter(_._1 == queryId).foreach(println)
 
-      revRank.take(10).foreach(println)
-
       revRank.indices.foreach(ind => {
         if (revRank(ind)._1 == queryId) {
-          rprRank = rprRank.+:((ind, revRank(ind)))
+          rprRank = rprRank.+:((ind, (testId.toInt, revRank(ind)._2))) // (index, (testId, score for queryId))
           println("get It")
         }
       })
@@ -97,7 +100,7 @@ object Main {
     }).reduce(_++_)
 
     println("original PPR")
-    prRank.indices.foreach(ind => println(ind, prRank(ind), titleMap.get(prRank(ind)._1)))
+    prRank.indices.foreach(ind => println(ind, prRank(ind), titleMap.get(prRank(ind)._1.toInt)))
 
     println("reversed PPR")
     val finalRank = rprRank.sortBy(_._1)

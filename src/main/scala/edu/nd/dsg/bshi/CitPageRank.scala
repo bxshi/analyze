@@ -41,7 +41,7 @@ object CitPageRank {
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
         // Set restart probability to personalized version(all restart will direct to source node)
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
@@ -60,7 +60,7 @@ object CitPageRank {
                                                maxIter: Int,
                                                alpha: Double): Graph[(Double, Int), Double] = {
 
-    val numVertices = graph.numVertices
+    val weight = graph.numVertices
 
     // Reversed PageRank
 
@@ -69,7 +69,7 @@ object CitPageRank {
       .outerJoinVertices(graph.inDegrees) { (vid, vdata, deg) => deg.getOrElse(0)}
       .mapTriplets( e => 1.0 / e.dstAttr, TripletFields.Dst)
       .mapVertices((id, attr) => {
-      if (id == startPoint) numVertices.toDouble else 0.0
+      if (id == startPoint) weight.toDouble else 0.0
     }).outerJoinVertices(graph.outDegrees) { (vid, vdata, outDeg) => (vdata, outDeg.getOrElse(0))}
 
     var iteration = 0
@@ -83,7 +83,7 @@ object CitPageRank {
 
       prevRankGraph = revGraph
       revGraph = revGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0) + (1.0 - alpha) * msgSum, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
       }.cache()
 
       revGraph.edges.foreachPartition(x => {})
