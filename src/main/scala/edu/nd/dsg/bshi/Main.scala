@@ -66,6 +66,16 @@ object Main {
       return
     }
 
+    var rankGraph: Graph[(Double, Int), Double] = graph
+      // Associate the degree with each vertex
+      .outerJoinVertices(graph.outDegrees) { (vid, vdata, deg) => deg.getOrElse(0) }
+      // Set the weight on the edges based on the degree
+      .mapTriplets( e => 1.0 / e.srcAttr, TripletFields.Src )
+      // Set the vertex attributes to the initial pagerank values
+      .mapVertices( (id, attr) => {
+      // At initialization stage, only source has weight
+      if (id == queryId) totalV.toDouble else 0.0
+    } ).outerJoinVertices(graph.inDegrees) { (vid, vdata, inDeg) => (vdata, inDeg.getOrElse(0))}
 
     val prRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha).vertices.map(x => (x._2._1, x._1)).top(topK).map(y => (y._2, y._1)).toSeq
 
