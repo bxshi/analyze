@@ -26,8 +26,10 @@ object Main {
       titlePath = args(5)
     }
 
+    println(alpha, queryId, maxIter, topK, filePath, titlePath)
+
     val conf = new SparkConf()
-      .setMaster("local[2]")
+      .setMaster("local[10]")
       .setAppName("Citation PageRank")
       .set("spark.executor.memory", "1g")
       .set("spark.driver.memory", "1g")
@@ -37,7 +39,7 @@ object Main {
     // Input file should be space separated e.g. "src dst", one edge per line
     val file = sc.textFile(filePath).map(x => x.split(" ").map(_.toInt))
 
-    val vertices: RDD[(VertexId, (Double,Boolean))] = sc.parallelize(file.map(_.toSet).reduce(_++_).toSeq.map(x => (x.toLong, (0.0, false))))
+    val vertices: RDD[(VertexId, Double)] = sc.parallelize(file.map(_.toSet).reduce(_++_).toSeq.map(x => (x.toLong, 0.0)))
 
     val edges: RDD[Edge[Boolean]] = sc.textFile(filePath).map(x => {
       val endPoints = x.split(" ").map(_.toInt)
@@ -73,35 +75,28 @@ object Main {
       if (id == queryId) totalV.toDouble else 0.0
     } ).outerJoinVertices(graph.inDegrees) { (vid, vdata, inDeg) => (vdata, inDeg.getOrElse(0))}
 
-    var iteration = 0
-    var prevRankGraph: Graph[(Double, Int), Double] = null
-    while (iteration < maxIter) {
-      rankGraph.cache()
+    val prRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha).vertices.map(x => (x._2._1, x._1)).top(topK).map(y => (y._2, y._1)).toSeq
 
-      // Compute the outgoing rank contributions of each vertex, perform local preaggregation, and
-      // do the final aggregation at the receiving vertices. Requires a shuffle for aggregation.
-      val rankUpdates = rankGraph.aggregateMessages[Double](
-        ctx => ctx.sendToDst(ctx.srcAttr._1 * ctx.attr), _ + _, TripletFields.Src)
+    prRank.foreach(println)
 
-      // Apply the final rank updates to get the new ranks, using join to preserve ranks of vertices
-      // that didn't receive a message. Requires a shuffle for broadcasting updated ranks to the
-      // edge partitions.
-      prevRankGraph = rankGraph
-      rankGraph = rankGraph.joinVertices(rankUpdates) {
-        // Set restart probability to personalized version(all restart will direct to source node)
-        (id, oldRank, msgSum) => ((if (id == queryId) alpha * totalV else 0 ) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
-      }.cache()
+    var rprRank: Seq[(Int, (Int, Double))] = Seq.empty
 
-      rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
-      if (iteration % 5 == 0) println(s"PageRank finished iteration $iteration.")
-      prevRankGraph.vertices.unpersist(false)
-      prevRankGraph.edges.unpersist(false)
+    // TODO: Early stop based on year
+    for(testId <- prRank.map(_._1)) {
+      println("test testId",testId)
+      val tmpRank = CitPageRank.revPageRank(graph, testId, maxIter, alpha)
+      val revRank = tmpRank.vertices.map(x => (x._2._1, x._1)).top(totalV.toInt).map(y => (y._2.toInt, y._1)).toSeq
 
-      iteration += 1
+      tmpRank.vertices.filter(_._1 == queryId).foreach(println)
+
+      revRank.indices.foreach(ind => {
+        if (revRank(ind)._1 == queryId) {
+          rprRank = rprRank.+:((ind, (testId.toInt, revRank(ind)._2))) // (index, (testId, score for queryId))
+          println("get It")
+        }
+      })
 
     }
-
-    val finalRank = rankGraph.vertices.map(x => (x._2._1, x._1)).top(topK).map(y => (y._2, y._1)).toSeq
 
     sc.stop()
 
@@ -109,12 +104,15 @@ object Main {
 
     val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
       val tmp = x.split("\",\"").toList
-      Map[Long, String]((tmp(0).replace("\"","").toLong, tmp(1).replace("\"","")))
+      Map[Int, String]((tmp(0).replace("\"","").toInt, tmp(1)))
     }).reduce(_++_)
 
-    println(("src", queryId, titleMap.getOrElse(queryId, "NO_TITLE")))
-    finalRank.indices.foreach(ind => println(ind, finalRank(ind)._1, finalRank(ind)._2, titleMap.getOrElse(finalRank(ind)._1, "NO_TITLE")))
+    println("original PPR")
+    prRank.indices.foreach(ind => println(ind, prRank(ind), titleMap.get(prRank(ind)._1.toInt)))
 
+    println("reversed PPR")
+    val finalRank = rprRank.sortBy(_._1)
+    finalRank.indices.foreach(ind => println(ind, finalRank(ind), titleMap.get(finalRank(ind)._2._1)))
 
   }
 }
