@@ -4,7 +4,18 @@ import org.apache.spark.graphx._
 
 import scala.reflect.ClassTag
 
+// TODO: Add early termination based on Delta (Δ = score_old - score_new)
 object CitPageRank {
+  /**
+   * Personalized PageRank
+   * @param graph Graph
+   * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
+   * @param maxIter Max iteration number
+   * @param alpha Damping factor
+   * @tparam VD Data type of vertices
+   * @tparam ED Data type of edges
+   * @return
+   */
   def pageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                            startPoint: VertexId,
                                            maxIter: Int,
@@ -55,6 +66,17 @@ object CitPageRank {
     rankGraph
   }
 
+  /**
+   * Reversed Personalized PageRank
+   * This method reverse all edges in original graph and compute PPR on it
+   * @param graph Graph
+   * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
+   * @param maxIter Max iteration number
+   * @param alpha Damping factor
+   * @tparam VD Data type of vertices
+   * @tparam ED Data type of edges
+   * @return
+   */
   def revPageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                               startPoint: VertexId,
                                                maxIter: Int,

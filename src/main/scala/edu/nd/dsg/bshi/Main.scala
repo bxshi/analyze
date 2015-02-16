@@ -81,7 +81,7 @@ object Main {
 
     var rprRank: Seq[(Int, (Int, Double))] = Seq.empty
 
-    // TODO: Early stop based on year
+    // TODO: Reduce graph size by year/nodes that related to query point(back-traverse)
     for(testId <- prRank.map(_._1)) {
       println("test testId",testId)
       val tmpRank = CitPageRank.revPageRank(graph, testId, maxIter, alpha)
@@ -108,11 +108,11 @@ object Main {
     }).reduce(_++_)
 
     println("original PPR")
-    prRank.indices.foreach(ind => println(ind, prRank(ind), titleMap.get(prRank(ind)._1.toInt)))
+    prRank.indices.foreach(ind => println(ind, prRank(ind), titleMap.getOrElse(prRank(ind)._1.toInt, "")))
 
     println("reversed PPR")
     val finalRank = rprRank.sortBy(_._1)
-    finalRank.indices.foreach(ind => println(ind, finalRank(ind), titleMap.get(finalRank(ind)._2._1)))
+    finalRank.indices.foreach(ind => println(ind, finalRank(ind), titleMap.getOrElse(finalRank(ind)._2._1, "")))
 
   }
 }
