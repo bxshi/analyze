@@ -4,11 +4,22 @@ import org.apache.spark.graphx._
 
 import scala.reflect.ClassTag
 
+// TODO: Add early termination based on Delta (Δ = score_old - score_new)
 object CitPageRank {
+  /**
+   * Personalized PageRank
+   * @param graph Graph
+   * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
+   * @param maxIter Max iteration number
+   * @param alpha Damping factor
+   * @tparam VD Data type of vertices
+   * @tparam ED Data type of edges
+   * @return
+   */
   def pageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                            startPoint: VertexId,
                                            maxIter: Int,
-                                           alpha: Double): Graph[(Double, Int), Double] = {
+                                           alpha: Double, normalize: Boolean = true): Graph[(Double, Int), Double] = {
 
     val numVertices = graph.numVertices
 
@@ -41,7 +52,7 @@ object CitPageRank {
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
         // Set restart probability to personalized version(all restart will direct to source node)
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
@@ -55,10 +66,21 @@ object CitPageRank {
     rankGraph
   }
 
+  /**
+   * Reversed Personalized PageRank
+   * This method reverse all edges in original graph and compute PPR on it
+   * @param graph Graph
+   * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
+   * @param maxIter Max iteration number
+   * @param alpha Damping factor
+   * @tparam VD Data type of vertices
+   * @tparam ED Data type of edges
+   * @return
+   */
   def revPageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                               startPoint: VertexId,
                                                maxIter: Int,
-                                               alpha: Double): Graph[(Double, Int), Double] = {
+                                               alpha: Double, normalize: Boolean = true): Graph[(Double, Int), Double] = {
 
     val weight = graph.numVertices
 
@@ -83,7 +105,7 @@ object CitPageRank {
 
       prevRankGraph = revGraph
       revGraph = revGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
       }.cache()
 
       revGraph.edges.foreachPartition(x => {})
