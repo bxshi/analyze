@@ -19,7 +19,7 @@ object CitPageRank {
   def pageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                            startPoint: VertexId,
                                            maxIter: Int,
-                                           alpha: Double): Graph[(Double, Int), Double] = {
+                                           alpha: Double, normalize: Boolean = true): Graph[(Double, Int), Double] = {
 
     val numVertices = graph.numVertices
 
@@ -52,7 +52,7 @@ object CitPageRank {
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
         // Set restart probability to personalized version(all restart will direct to source node)
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
@@ -80,7 +80,7 @@ object CitPageRank {
   def revPageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                               startPoint: VertexId,
                                                maxIter: Int,
-                                               alpha: Double): Graph[(Double, Int), Double] = {
+                                               alpha: Double, normalize: Boolean = true): Graph[(Double, Int), Double] = {
 
     val weight = graph.numVertices
 
@@ -105,7 +105,7 @@ object CitPageRank {
 
       prevRankGraph = revGraph
       revGraph = revGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0) + (1.0 - alpha) * msgSum / oldRank._2, oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
       }.cache()
 
       revGraph.edges.foreachPartition(x => {})
