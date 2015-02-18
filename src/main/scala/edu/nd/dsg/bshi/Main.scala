@@ -94,11 +94,15 @@ object Main {
     val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
 
 
-    val prRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha)
-    val prRankTopK = extractPageRank(prRank, titleMap)
+    // pprank w/ normalization
+    val pprRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha)
+    val pprRankTopK = extractPageRank(pprRank, titleMap)
+
+    val pprNoNormRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha, false)
+    val pprNoNormRankTopK = extractPageRank(pprNoNormRank, titleMap)
 
     // Log prRank
-    prRankTopK.foreach( elem => {
+    pprRankTopK.foreach( elem => {
       if (!finalResult.contains(elem._1)) {
         finalResult(elem._1) = new mutable.HashMap[String, String]()
         finalResult(elem._1)("source") = queryId.toString //Id of source
@@ -108,29 +112,45 @@ object Main {
       finalResult(elem._1)("pprscore") = elem._4.toString // PPR score with indeg normalization
     })
 
-    var rprRankTopK: Seq[(Int, (Int, Double))] = Seq.empty
+    pprNoNormRankTopK.foreach( elem => {
+      if (!finalResult.contains(elem._1)) {
+        finalResult(elem._1) = new mutable.HashMap[String, String]()
+        finalResult(elem._1)("source") = queryId.toString
+        finalResult(elem._1)("title") = elem._2
+      }
+      finalResult(elem._1)("pprank_nonorm") = elem._3.toString
+      finalResult(elem._1)("pprscore_nonorm") = elem._4.toString
+    })
 
 
     // TODO: Reduce graph size by year/nodes that related to query point(back-traverse)
-    for(testId <- prRankTopK.map(_._1)) { // Do reversed PPR on results
+    for(testId <- pprRankTopK.map(_._1)) { // Do reversed PPR on results
       println("test testId",testId)
       val tmpRank = CitPageRank.revPageRank(graph, testId, maxIter, alpha)
       val revRank = extractTargetPage(tmpRank, titleMap, testId)
 
       finalResult(testId)("rpprank") = revRank._3.toString
-      finalResult(testId)("rppscore") = revRank._4.toString
+      finalResult(testId)("rpprscore") = revRank._4.toString
+    }
 
+    for(testId <- pprNoNormRankTopK.map(_._1)) {
+      println("test testId",testId)
+      val tmpRank = CitPageRank.revPageRank(graph, testId, maxIter, alpha)
+      val revRank = extractTargetPage(tmpRank, titleMap, testId)
+
+      finalResult(testId)("rpprank_nonorm") = revRank._3.toString
+      finalResult(testId)("rpprscore_nonorm") = revRank._4.toString
     }
 
     sc.stop()
 
     val writer = new PrintWriter(new File(outputPath))
-    val csvHeader = Seq("node", "source", "title", "pprank", "pprscore", "rpprank", "rppscore")
+    val csvHeader = Seq("node", "source", "title", "pprank", "rpprank", "pprank_nonorm", "rpprank_nonorm", "rpprscore", "pprscore", "pprscore_nonorm", "rpprscore_nonorm")
     writer.write(csvHeader.reduce(_+","+_)+"\n")
 
     finalResult.map(elem => {
       val tuple = Seq(elem._1.toString, queryId.toString)
-      val tupleRest = csvHeader.slice(2, csvHeader.size).map(x => elem._2.getOrElse(x, "").toString)
+      val tupleRest = csvHeader.slice(2, csvHeader.size).map(x => elem._2.getOrElse(x, "NA").toString)
       writer.write((tuple ++ tupleRest).reduce(_+","+_)+"\n")
     })
 
