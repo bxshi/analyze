@@ -64,6 +64,7 @@ object CitPageRank {
       iteration += 1
 
     }
+    // Normalize PPR
     rankGraph.mapVertices((vid, vdata) => (if (normalize && vdata._2 > 1) vdata._1 / vdata._2 else vdata._1, vdata._2)).cache()
   }
 
@@ -117,6 +118,7 @@ object CitPageRank {
       iteration += 1
     }
 
+    // Normalize PPR
     revGraph.mapVertices((vid, vdata) => (if (normalize && vdata._2 > 1) vdata._1 / vdata._2 else vdata._1, vdata._2)).cache()
   }
 }
