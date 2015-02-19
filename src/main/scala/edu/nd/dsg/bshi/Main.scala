@@ -16,6 +16,7 @@ object Main {
   var topK = 20
   var titlePath = ""
   var outputPath = ""
+  var nCores = 4
 
   def extractPageRank(graph: Graph[(Double, Int), Double], titleMap: Map[VertexId, String], top: Int = topK): Seq[(VertexId, String, Int, Double)] = {
     val tmpRes = graph.vertices.map(x => (x._2._1, x._1)).top(top).map(y => (y._2, y._1)).toSeq
@@ -30,32 +31,31 @@ object Main {
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.length < 7) {
-      println("usage: alpha queryId maxIter topK edgeFilePath titleFilePath outputPath")
+    if (args.length < 8) {
+      println("usage: alpha queryId maxIter topK nCores edgeFilePath titleFilePath outputPath")
       return
     } else {
       alpha = args(0).toDouble
       queryId = args(1).toLong
       maxIter = args(2).toInt
       topK = args(3).toInt
-      filePath = args(4)
-      titlePath = args(5)
-      outputPath = args(6)
+      nCores = args(4).toInt
+      filePath = args(5)
+      titlePath = args(6)
+      outputPath = args(7)
     }
-
-    println(alpha, queryId, maxIter, topK, filePath, titlePath)
 
     // Load article_list
 
     val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
       val tmp = x.split("\",\"").toList
-      Map[VertexId, String]((tmp(0).replace("\"","").toLong, tmp(1).replace("\"","")))
+      Map[VertexId, String]((tmp(0).replace("\"","").toLong, tmp(1).replaceAll("\\p{P}", " ")))
     }).reduce(_++_)
 
     println("title map loaded")
 
     val conf = new SparkConf()
-      .setMaster("local[10]")
+      .setMaster("local["+nCores.toString+"]")
       .setAppName("Citation PageRank")
       .set("spark.executor.memory", "1g")
       .set("spark.driver.memory", "1g")
@@ -92,7 +92,6 @@ object Main {
 
     // For final output
     val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
-
 
     // pprank w/ normalization
     val pprRank = CitPageRank.pageRank(graph, queryId, maxIter, alpha)
