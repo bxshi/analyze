@@ -64,7 +64,7 @@ object CitPageRank {
       iteration += 1
 
     }
-    // Normalize PPR
+
     rankGraph
   }
 
@@ -118,7 +118,6 @@ object CitPageRank {
       iteration += 1
     }
 
-    // Normalize PPR
     revGraph
   }
 }
