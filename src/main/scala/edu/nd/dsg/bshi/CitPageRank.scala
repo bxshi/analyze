@@ -5,7 +5,6 @@ import org.apache.spark.graphx._
 import scala.reflect.ClassTag
 
 // TODO: Add early termination based on Delta (Δ = score_old - score_new)
-// TODO: Change normalization function, say convert \frac{1}{indeg(v)} to \frac{1}{log(indeg(v)+1)+1}
 object CitPageRank {
   /**
    * Personalized PageRank

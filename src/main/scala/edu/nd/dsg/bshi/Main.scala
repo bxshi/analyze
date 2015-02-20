@@ -130,7 +130,6 @@ object Main {
         finalResult(elem._1)("source") = queryId.toString //Id of source
         finalResult(elem._1)("title") = elem._2 // Title of result
       }
-      //TODO: Output citation number (indeg of each node)
       finalResult(elem._1)("pprank") = elem._3.toString // PPR rank with indeg normalization
       finalResult(elem._1)("pprscore") = elem._4.toString // PPR score with indeg normalization
       finalResult(elem._1)("indeg") = elem._5.toString
