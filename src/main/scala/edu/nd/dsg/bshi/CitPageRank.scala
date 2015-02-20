@@ -5,7 +5,7 @@ import org.apache.spark.graphx._
 import scala.reflect.ClassTag
 
 // TODO: Add early termination based on Delta (Δ = score_old - score_new)
-// TODO: Change normalization function, say convert \frac{1}{indeg(v)} to \frac{1}{log(indeg(v))}
+// TODO: Change normalization function, say convert \frac{1}{indeg(v)} to \frac{1}{log(indeg(v)+1)+1}
 object CitPageRank {
   /**
    * Personalized PageRank
@@ -53,7 +53,8 @@ object CitPageRank {
       prevRankGraph = rankGraph
       rankGraph = rankGraph.joinVertices(rankUpdates) {
         // Set restart probability to personalized version(all restart will direct to source node)
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
+//        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * numVertices else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) scala.math.log(oldRank._2+1)+1 else 1), oldRank._2)
       }.cache()
 
       rankGraph.edges.foreachPartition(x => {}) // also materializes rankGraph.vertices
@@ -107,7 +108,8 @@ object CitPageRank {
 
       prevRankGraph = revGraph
       revGraph = revGraph.joinVertices(rankUpdates) {
-        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
+//        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) oldRank._2 else 1), oldRank._2)
+        (id, oldRank, msgSum) => ((if (id == startPoint) alpha * weight else 0 ) + (1.0 - alpha) * msgSum / (if (normalize) scala.math.log(oldRank._2+1)+1 else 1), oldRank._2)
       }.cache()
 
       revGraph.edges.foreachPartition(x => {})
