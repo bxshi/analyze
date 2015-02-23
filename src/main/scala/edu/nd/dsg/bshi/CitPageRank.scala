@@ -8,6 +8,7 @@ import scala.reflect.ClassTag
 object CitPageRank {
   /**
    * Personalized PageRank
+   * @deprecated Please use PersonalizedPageRank object instead
    * @param graph Graph
    * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
    * @param maxIter Max iteration number
@@ -71,6 +72,8 @@ object CitPageRank {
   /**
    * Reversed Personalized PageRank
    * This method reverse all edges in original graph and compute PPR on it
+   * @deprecated Please use PersonalizedPageRank object instead, there will be no separate reversed PPR method so you need
+   *            revese edges before run PPR
    * @param graph Graph
    * @param startPoint Query point, at initialization stage this node will has value of #vertices, where otheres have a value of 0
    * @param maxIter Max iteration number

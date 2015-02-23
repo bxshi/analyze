@@ -35,9 +35,9 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
 
     val resGraph = CitPageRank.pageRank(testGraph, queryId, maxIter, alpha, false)
     val resMap = resGraph.vertices.map(x => (x._1, x._2._1)).collect().toMap
-    assert(resMap.getOrElse(1, 0) == 3)
+    assert(resMap.getOrElse(1, 0) == 1)
     assert(resMap.getOrElse(3, 0) == 0.0)
-    assert(resMap.getOrElse(2, 0) == 2.55)
+    assert(resMap.getOrElse(2, 0) == 0.85)
   }
 
   test("Personalized PageRank with in-degree normalization") {
@@ -46,9 +46,9 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
 
     val resGraph = CitPageRank.pageRank(testGraph, queryId, maxIter, alpha, true)
     val resMap = resGraph.vertices.map(x => (x._1, x._2._1)).collect().toMap
-    assert(resMap.getOrElse(1, 0) == 3)
+    assert(resMap.getOrElse(1, 0) == 1)
     assert(resMap.getOrElse(3, 0) == 0.0)
-    assert(resMap.getOrElse(2, 0) == 1.275)
+    assert(resMap.getOrElse(2, 0) == 0.85)
   }
 
   test("A reversed version of Personalized PageRank with one iteration") {
@@ -65,7 +65,7 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
   test("Reversed Personalized PageRank with in-degree normalization") {
     val queryId = 2
     val maxIter = 1
-    val resMap = CitPageRank.revPageRank(testGraph, queryId, maxIter, alpha)
+    val resMap = CitPageRank.revPageRank(testGraph, queryId, maxIter, alpha, true)
       .vertices.map(x=>(x._1,x._2._1)).collect().toMap
     assert(resMap.getOrElse(1,0) == 1.275)
     assert(resMap.getOrElse(2,0) == 3.0)
