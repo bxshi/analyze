@@ -6,6 +6,16 @@ import org.apache.spark.graphx._
 
 object PersonalizedPageRank {
 
+  /**
+   * Calculate PPR with a fix number of iterations
+   * @param graph the graph will be used to calculate PPR
+   * @param source the start point of PPR
+   * @param maxIter the iteration number of PPR
+   * @param resetProb damping factor
+   * @tparam VD vertex data type of original graph, not used in this function
+   * @tparam ED edge data type of original graph, not used in this function
+   * @return
+   */
   def run[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED], source: VertexId, maxIter: Int, resetProb: Double = 0.15): Graph[Double, Double] =
   {
     var rankGraph: Graph[Double, Double] = graph
@@ -53,6 +63,16 @@ object PersonalizedPageRank {
     rankGraph
   }
 
+  /**
+   * Calculate PPR until it converges
+   * @param graph the graph will be used to calculate PPR
+   * @param source the start point of PPR
+   * @param tol delta, the smaller this is, the more precise the result will be
+   * @param resetProb damping factor
+   * @tparam VD vertex data type of original graph, not used in this function
+   * @tparam ED edge data type of original graph, not used in this function
+   * @return
+   */
   def runUntilConvergence[VD: ClassTag, ED: ClassTag](
       graph: Graph[VD, ED], source: VertexId, tol: Double, resetProb: Double = 0.15): Graph[Double, Double] =
   {
