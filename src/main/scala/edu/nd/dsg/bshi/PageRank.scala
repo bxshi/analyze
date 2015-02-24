@@ -27,7 +27,7 @@ object PageRank {
    *         containing the normalized weight.
    *
    */
-  def run[ED: ClassTag](graph: Graph[Double, ED],
+  def runWithInitialScore[ED: ClassTag](graph: Graph[Double, ED],
                         numIter: Int,
                         resetProb: Double = 0.15): Graph[Double, Double] =
   {
@@ -69,6 +69,12 @@ object PageRank {
     rankGraph
   }
 
+  def run[VD: ClassTag, ED: ClassTag](graph: Graph[Double, ED],
+                                        numIter: Int,
+                                        resetProb: Double = 0.15): Graph[Double, Double] = {
+    graph.staticPageRank(numIter, resetProb)
+  }
+
   /**
    * Run a dynamic version of PageRank returning a graph with vertex attributes containing the
    * PageRank and edge attributes containing the normalized edge weight.
@@ -87,7 +93,7 @@ object PageRank {
    * @return the graph containing with each vertex containing the PageRank and each edge
    *         containing the normalized weight.
    */
-  def runUntilConvergence[ED: ClassTag](graph: Graph[Double, ED],
+  def runWithInitialScoreUntilConvergence[ED: ClassTag](graph: Graph[Double, ED],
                                                       tol: Double,
                                                       resetProb: Double = 0.15): Graph[Double, Double] =
   {
@@ -134,4 +140,11 @@ object PageRank {
       vertexProgram, sendMessage, messageCombiner)
       .mapVertices((vid, attr) => attr._1)
   } // end of deltaPageRank
+
+  def runUntilConvergence[VD: ClassTag, ED: ClassTag](graph: Graph[Double, ED],
+                                                        tol: Double,
+                                                        resetProb: Double = 0.15): Graph[Double, Double] = {
+    graph.pageRank(tol, resetProb)
+  }
+
 }

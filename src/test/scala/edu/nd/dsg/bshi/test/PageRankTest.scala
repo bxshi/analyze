@@ -30,34 +30,34 @@ class PageRankTest extends FunSuite with ShouldMatchers with BeforeAndAfter{
 
   test("Initialize before PR program") {
     val g = testGraph.mapVertices((vid, vd) => 0.15)
-    val resGraph = PageRank.run(g, 10)
+    val resGraph = PageRank.runWithInitialScore(g, 10)
     resGraph.vertices.map(_._2).reduce(_+_) should be (0.705 +- 0.001)
   }
 
   test("Customized initial scores") {
     val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
-    val resGraph = PageRank.run(g, 10)
+    val resGraph = PageRank.runWithInitialScore(g, 10)
     resGraph.vertices.map(_._2).reduce(_+_) should be (2.925 +- 0.001)
   }
 
   test("Initialize before PR-converge program") {
     val g = testGraph.mapVertices((vid, vd) => 0.15)
-    val resGraph = PageRank.runUntilConvergence(g, 0.001)
+    val resGraph = PageRank.runWithInitialScoreUntilConvergence(g, 0.001)
     resGraph.vertices.map(_._2).reduce(_+_) should be (0.705 +- 0.001)
   }
 
   test("Customized initial scores with PR-converge") {
     val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
-    val resGraph = PageRank.runUntilConvergence(g, 0.001)
+    val resGraph = PageRank.runWithInitialScoreUntilConvergence(g, 0.001)
     resGraph.vertices.map(_._2).reduce(_+_) should be (3.075 +- 0.001)
   }
 
   test("Keep using PR-converge will increase the total weight on the graph") {
     val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
-    val resGraph = PageRank.runUntilConvergence(g, 0.001)
+    val resGraph = PageRank.runWithInitialScoreUntilConvergence(g, 0.001)
     resGraph.vertices.map(_._2).reduce(_+_) should be (3.075 +- 0.001)
 
-    val resGraph2 = PageRank.runUntilConvergence(resGraph, 0.001)
+    val resGraph2 = PageRank.runWithInitialScoreUntilConvergence(resGraph, 0.001)
     resGraph2.vertices.map(_._2).reduce(_+_) should be (4.35 +- 0.001)
   }
 
