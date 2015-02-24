@@ -4,9 +4,9 @@ import edu.nd.dsg.bshi.CitPageRank
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.{BeforeAndAfter, FunSuite, ShouldMatchers}
 
-class CitPageRankTest extends FunSuite with BeforeAndAfter {
+class CitPageRankTest extends FunSuite with BeforeAndAfter with ShouldMatchers {
 
   var conf: SparkConf = null
   var sc: SparkContext = null
@@ -35,9 +35,9 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
 
     val resGraph = CitPageRank.pageRank(testGraph, queryId, maxIter, alpha, false)
     val resMap = resGraph.vertices.map(x => (x._1, x._2._1)).collect().toMap
-    assert(resMap.getOrElse(1, 0) == 1)
+    assert(resMap.getOrElse(1, 0) == 3)
     assert(resMap.getOrElse(3, 0) == 0.0)
-    assert(resMap.getOrElse(2, 0) == 0.85)
+    assert(resMap.getOrElse(2, 0) == 2.55)
   }
 
   test("Personalized PageRank with in-degree normalization") {
@@ -46,9 +46,9 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
 
     val resGraph = CitPageRank.pageRank(testGraph, queryId, maxIter, alpha, true)
     val resMap = resGraph.vertices.map(x => (x._1, x._2._1)).collect().toMap
-    assert(resMap.getOrElse(1, 0) == 1)
+    assert(resMap.getOrElse(1, 0) == 3)
     assert(resMap.getOrElse(3, 0) == 0.0)
-    assert(resMap.getOrElse(2, 0) == 0.85)
+    resMap.getOrElse(2, 0.0) should be (1.215 +- 0.0001)
   }
 
   test("A reversed version of Personalized PageRank with one iteration") {
@@ -65,7 +65,7 @@ class CitPageRankTest extends FunSuite with BeforeAndAfter {
   test("Reversed Personalized PageRank with in-degree normalization") {
     val queryId = 2
     val maxIter = 1
-    val resMap = CitPageRank.revPageRank(testGraph, queryId, maxIter, alpha, true)
+    val resMap = CitPageRank.revPageRank(testGraph, queryId, maxIter, alpha, false)
       .vertices.map(x=>(x._1,x._2._1)).collect().toMap
     assert(resMap.getOrElse(1,0) == 1.275)
     assert(resMap.getOrElse(2,0) == 3.0)
