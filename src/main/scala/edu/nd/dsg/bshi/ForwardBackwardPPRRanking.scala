@@ -14,7 +14,7 @@ import scala.collection.mutable
  * Calculate final score of topK as (\lambda * s_1/(s) + (1-\lambda)*s'_1/(s'), ...)
  * s and s' will be the initial score of source or the total score of entire graph in FPPR and BPPR
  */
-object ForwardBackwardPPRRanking {
+object ForwardBackwardPPRRanking extends OutputWriter[String]{
 
   var graph: Graph = null // original graph
   // final result {vid:{key1:val1, key2:val2, ...}}
@@ -45,24 +45,7 @@ object ForwardBackwardPPRRanking {
     //TODO: Combine them together, save to finalResult
 
     //TODO: Call writeResult to write results
-  }
-
-  /**
-   * Write result to a file
-   * @param filePath output file path
-   */
-  def writeResult(filePath: String): Unit = {
-    val writer = new PrintWriter(new File(filePath))
-    // write csv header
-    writer.write((Seq("id") ++ stringKeys).reduce(_+","+_)+"\n")
-
-    finalResult.map(elem => {
-      val tuple = Seq(elem._1.toString) ++ stringKeys.map(x => elem._2.getOrElse(x, "NA").toString)
-      writer.write(tuple.reduce(_+","+_)+"\n")
-    })
-
-    writer.close()
-
+    writeResult("./test_output", finalResult, stringKeys)
   }
 
 }
