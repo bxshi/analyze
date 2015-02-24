@@ -4,7 +4,7 @@ import org.apache.spark.graphx._
 
 import scala.reflect.ClassTag
 
-// TODO: Add early termination based on Delta (Δ = score_old - score_new)
+@deprecated("Please use PersonalizedPageRank object instead")
 object CitPageRank {
   /**
    * Personalized PageRank
@@ -17,6 +17,7 @@ object CitPageRank {
    * @tparam ED Data type of edges
    * @return
    */
+  @deprecated("Please use PersonalizedPageRank object instead")
   def pageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                            startPoint: VertexId,
                                            maxIter: Int,
@@ -82,6 +83,7 @@ object CitPageRank {
    * @tparam ED Data type of edges
    * @return
    */
+  @deprecated("Please use PersonalizedPageRank object instead")
   def revPageRank[VD: ClassTag, ED: ClassTag](graph: Graph[VD, ED],
                                               startPoint: VertexId,
                                                maxIter: Int,
