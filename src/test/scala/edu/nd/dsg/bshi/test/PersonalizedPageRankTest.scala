@@ -50,6 +50,37 @@ class PersonalizedPageRankTest extends FunSuite with BeforeAndAfter with ShouldM
     resGraph.vertices.map(_._2).reduce(_+_) should be (1.85 +- 0.001)
   }
 
+  test("Run PPR with empty initial score") {
+    val resGraph = PersonalizedPageRank.runWithInitialScore(testGraph, 1l, 10)
+    resGraph.vertices.map(_._2).reduce(_+_) should be (0.0 +- 0.001)
+  }
+
+  test("Run PPR with initial score") {
+    val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
+    val resGraph = PersonalizedPageRank.runWithInitialScore(g, 1l, 10)
+    resGraph.vertices.map(_._2).reduce(_+_) should be (2.775 +- 0.001)
+  }
+
+  test("Run PPR-converge with empty initial score") {
+    val resGraph = PersonalizedPageRank.runWithInitialScoreUntilConvergence(testGraph, 1l, 0.001)
+    resGraph.vertices.map(_._2).reduce(_+_) should be (0.0 +- 0.001)
+  }
+
+  test("Run PPR-converge with initial score") {
+    val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
+    val resGraph = PersonalizedPageRank.runWithInitialScoreUntilConvergence(g, 1l, 0.001)
+    resGraph.vertices.map(_._2).reduce(_+_) should be (3.075 +- 0.001)
+  }
+
+  test("Run PPR-converge multiple times will increase total score of that graph") {
+    val g = Graph(sc.parallelize(List((1l,1.0),(2l,0.3),(3l,0.5))), testGraph.edges)
+    val resGraph = PersonalizedPageRank.runWithInitialScoreUntilConvergence(g, 1l, 0.001)
+    resGraph.vertices.map(_._2).reduce(_+_) should be (3.075 +- 0.001)
+
+    val resGraph2 = PersonalizedPageRank.runWithInitialScoreUntilConvergence(resGraph, 1l, 0.001)
+    resGraph2.vertices.map(_._2).reduce(_+_) should be (4.35 +- 0.001)
+  }
+
   after {
     sc.stop()
   }
