@@ -14,3 +14,5 @@ libraryDependencies += "org.apache.spark" % "spark-core_2.10" % "1.2.0"
 libraryDependencies += "org.apache.spark" % "spark-graphx_2.10" % "1.2.0"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.2.4"
+
+parallelExecution in Test := false
