@@ -3,7 +3,7 @@ package edu.nd.dsg.bshi
 import scala.reflect.ClassTag
 import org.apache.spark.graphx._
 
-
+//TODO: Implement customized score initialization
 object PersonalizedPageRank {
 
   /**
