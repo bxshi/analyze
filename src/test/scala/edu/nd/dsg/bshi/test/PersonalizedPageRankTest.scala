@@ -18,7 +18,7 @@ class PersonalizedPageRankTest extends FunSuite with BeforeAndAfter with ShouldM
   before {
     conf = new SparkConf()
       .setMaster("local[2]")
-      .setAppName("CitPageRankTest")
+      .setAppName("PersonalizedPageRankTest")
     sc = new SparkContext(conf)
 
     vertices = sc.parallelize(List((1l,0.0),(2l,0.0),(3l,0.0)))
