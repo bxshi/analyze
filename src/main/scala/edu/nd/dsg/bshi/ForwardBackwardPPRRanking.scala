@@ -4,6 +4,7 @@ import java.io.{File, PrintWriter}
 
 import org.apache.spark.SparkContext
 import org.apache.spark.graphx._
+import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
 
@@ -16,7 +17,17 @@ import scala.collection.mutable
  */
 object ForwardBackwardPPRRanking extends OutputWriter[String]{
 
-  var graph: Graph = null // original graph
+  var alpha = 0.15
+  var queryId = 0l
+  var filePath = ""
+  var maxIter = 0
+  var topK = 20
+  var titlePath = ""
+  var outputPath = ""
+  var nCores = 4
+  var vertices: RDD[(VertexId, Double)] = null
+  var edges: RDD[Edge[Boolean]] = null
+  var graph: Graph[Double,Boolean]=null  // original graph
   // final result {vid:{key1:val1, key2:val2, ...}}
   val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
   // Keys that we will write
@@ -24,18 +35,26 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
 
   /**
    * Load graph and save to graph variable
-   * @param sc SparkContext
-   * @param filePaths A list of files that will be loaded
+   * @param args All the needed variables
    */
-  def graphLoader(sc: SparkContext, filePaths: Seq[String]): Unit = {
+  def Loader(args: Array[String]): Unit = {
     //TODO: Implement graph loader
-    graph = null
+    alpha = args(0).toDouble
+    queryId = args(1).toLong
+    maxIter = args(2).toInt
+    topK = args(3).toInt
+    nCores = args(4).toInt
+    filePath = args(5)
+    titlePath = args(6)
+    outputPath = args(7)
+    args.foreach(elem => println(elem))
   }
 
   /**
    * Run FBPPR
    */
   def run(): Unit = {
+    println("Run!!!")
     //TODO: Load graph
 
     //TODO: Run F-PPR, get topK result
@@ -45,7 +64,7 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
     //TODO: Combine them together, save to finalResult
 
     //TODO: Call writeResult to write results
-    writeResult("./test_output", finalResult, stringKeys)
+    //writeResult("./test_output", finalResult, stringKeys)
   }
 
 }

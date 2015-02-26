@@ -66,9 +66,11 @@ object Main {
       outputPath = args(7)
     }
 
+
+    ForwardBackwardPPRRanking.Loader(args)
     // Load article_list
 
-    val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
+    /*val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
       val tmp = x.split("\",\"").toList
       Map[VertexId, String]((tmp(0).replace("\"","").toLong, tmp(1).replaceAll("\\p{P}", " ")))
     }).reduce(_++_)
@@ -178,6 +180,6 @@ object Main {
       writer.write((tuple ++ tupleRest).reduce(_+","+_)+"\n")
     })
 
-    writer.close()
+    writer.close()*/
   }
 }
