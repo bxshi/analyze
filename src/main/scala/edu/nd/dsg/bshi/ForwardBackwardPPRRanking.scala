@@ -90,14 +90,9 @@ object ForwardBackwardPPRRanking extends OutputWriter[String] with ArgLoader{
 
     fpprRankTopK.foreach(elem => {
       Initial_node = Array[Long](elem._1)
-      println("!!!!!!1:")
       val invgraph = Graph(SetInitialP(Initial_node), graph.edges.reverse)
-      println("!!!!!!2:")
       val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, maxIter, alpha)
-      println("!!!!!!3:")
       val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
-      println("!!!!!!4:")
-      ans.foreach(println)
       finalResult(elem._1)("bppr_score") = ans.head._4.toString()
       finalResult(elem._1)("bppr_rank") = ans.head._3.toString()
     })
