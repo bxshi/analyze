@@ -69,6 +69,22 @@ object PageRank {
     rankGraph
   }
 
+  /**
+   * Run PageRank for a fixed number of iterations returning a graph
+   * with vertex attributes containing the PageRank and edge
+   * attributes the normalized edge weight.
+   *
+   * @tparam ED the original edge attribute (not used)
+   *
+   * @param graph the graph on which to compute PageRank,
+   *              the value on each vertex will be used as initial score of that node
+   * @param numIter the number of iterations of PageRank to run
+   * @param resetProb the random reset probability (alpha)
+   *
+   * @return the graph containing with each vertex containing the PageRank and each edge
+   *         containing the normalized weight.
+   *
+   */
   def run[VD: ClassTag, ED: ClassTag](graph: Graph[Double, ED],
                                         numIter: Int,
                                         resetProb: Double = 0.15): Graph[Double, Double] = {
@@ -141,6 +157,19 @@ object PageRank {
       .mapVertices((vid, attr) => attr._1)
   } // end of deltaPageRank
 
+  /**
+   * Run a dynamic version of PageRank returning a graph with vertex attributes containing the
+   * PageRank and edge attributes containing the normalized edge weight.
+   *
+   * @tparam ED the original edge attribute (not used)
+   *
+   * @param graph the graph on which to compute PageRank
+   * @param tol the tolerance allowed at convergence (smaller => more accurate).
+   * @param resetProb the random reset probability (alpha)
+   *
+   * @return the graph containing with each vertex containing the PageRank and each edge
+   *         containing the normalized weight.
+   */
   def runUntilConvergence[VD: ClassTag, ED: ClassTag](graph: Graph[Double, ED],
                                                         tol: Double,
                                                         resetProb: Double = 0.15): Graph[Double, Double] = {

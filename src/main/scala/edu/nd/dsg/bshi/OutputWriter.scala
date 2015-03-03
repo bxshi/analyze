@@ -40,4 +40,9 @@ trait OutputWriter[T] {
     str.toString()
   }
 
+  def printResult(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
+                  stringKeys: Seq[String]): Unit = {
+    print(resToString(resMap, stringKeys))
+  }
+
 }
