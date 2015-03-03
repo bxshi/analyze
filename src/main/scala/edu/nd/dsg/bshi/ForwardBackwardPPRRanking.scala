@@ -89,19 +89,19 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
 
   //if (arg.filter(_ == elem._1).length>0) 1/arg.length.toDouble else 0.0
 
-  def SetInitialP(arg: Array[Long]): Unit ={
-    val weighted_vertices: RDD[(VertexId, Double)] = vertices.map(elem => (elem._1, if (arg.filter(_ == elem._1).length>0) 1/arg.length.toDouble else 0.0))
-    graph = Graph(weighted_vertices, edges)
+  def SetInitialP(arg: Array[Long]): RDD[(VertexId, Double)] ={
+    vertices.map(elem => (elem._1, if (arg.filter(_ == elem._1).length>0) 1/arg.length.toDouble else 0.0))
   }
 /**
 * Run FBPPR
 */
   def run(): Unit = {
     var Initial_node = Array[Long](queryId)
-    SetInitialP(Initial_node)
+    val newgraph = Graph(SetInitialP(Initial_node), edges)
 
-    val resGraph = PersonalizedPageRank.runWithInitialScoreUntilConvergence(graph, queryId, 0.00001,alpha)
-    val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap,50)
+    val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, maxIter ,alpha)
+    val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap,topK)
+
     fpprRankTopK.foreach(elem =>{
       if (!finalResult.contains(elem._1)) {
         finalResult(elem._1) = new mutable.HashMap[String, String]()
@@ -116,10 +116,23 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
       }
     })
 
-
     //TODO: Run F-PPR, get topK result
 
     //TODO: Run B-PPR on all topK, get result
+
+    fpprRankTopK.foreach(elem => {
+      Initial_node = Array[Long](elem._1)
+      println("!!!!!!1:")
+      val invgraph = Graph(SetInitialP(Initial_node), graph.edges.reverse)
+      println("!!!!!!2:")
+      val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, maxIter, alpha)
+      println("!!!!!!3:")
+      val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
+      println("!!!!!!4:")
+      ans.foreach(println)
+      finalResult(elem._1)("bppr_score") = ans.head._4.toString()
+      finalResult(elem._1)("bppr_rank") = ans.head._3.toString()
+    })
 
     //TODO: Combine them together, save to finalResult
 
