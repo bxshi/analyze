@@ -15,46 +15,18 @@ import scala.collection.mutable
  * Calculate final score of topK as (\lambda * s_1/(s) + (1-\lambda)*s'_1/(s'), ...)
  * s and s' will be the initial score of source or the total score of entire graph in FPPR and BPPR
  */
-object ForwardBackwardPPRRanking extends OutputWriter[String]{
+object ForwardBackwardPPRRanking extends OutputWriter[String] with ArgLoader{
 
-  var alpha = 0.15
-  var queryId = 0l
-  var filePath = ""
-  var maxIter = 0
-  var topK = 20
-  var titlePath = ""
-  var outputPath = ""
-  var nCores = 4
-  var vertices: RDD[(VertexId, Double)] = null
-  var edges: RDD[Edge[Boolean]] = null
-  var graph: Graph[Double,Boolean]=null  // original graph
-  // final result {vid:{key1:val1, key2:val2, ...}}
-  val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
   // Keys that we will write
   val stringKeys = Seq("title", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank")
-  var titleMap :Map[VertexId, String] = null
+
   /**
    * Load graph and save to graph variable
    * @param args All the needed variables
    */
   def Loader(args: Array[String]): Unit = {
-    //TODO: Implement graph loader
-    alpha = args(0).toDouble
-    queryId = args(1).toLong
-    maxIter = args(2).toInt
-    topK = args(3).toInt
-    nCores = args(4).toInt
-    filePath = args(5)
-    titlePath = args(6)
-    outputPath = args(7)
-    // Load article_list
 
-    titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
-      val tmp = x.split("\",\"").toList
-      Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
-    }).reduce(_ ++ _)
-
-    println("title map loaded")
+    argLoader(args) // Load all common arguments
 
     val conf = new SparkConf()
       .setMaster("local[" + nCores.toString + "]")
@@ -116,10 +88,6 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
       }
     })
 
-    //TODO: Run F-PPR, get topK result
-
-    //TODO: Run B-PPR on all topK, get result
-
     fpprRankTopK.foreach(elem => {
       Initial_node = Array[Long](elem._1)
       println("!!!!!!1:")
@@ -134,9 +102,6 @@ object ForwardBackwardPPRRanking extends OutputWriter[String]{
       finalResult(elem._1)("bppr_rank") = ans.head._3.toString()
     })
 
-    //TODO: Combine them together, save to finalResult
-
-    //TODO: Call writeResult to write results
     writeResult(outputPath, finalResult, stringKeys)
     println("Finished!")
   }
