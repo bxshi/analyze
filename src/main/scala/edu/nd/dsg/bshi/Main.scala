@@ -16,7 +16,7 @@ object Main {
       return
     }
 
-    ForwardBackwardPPRRanking.Loader(args)
+    ForwardBackwardPPRRanking.load(args)
     ForwardBackwardPPRRanking.run()
   }
 }

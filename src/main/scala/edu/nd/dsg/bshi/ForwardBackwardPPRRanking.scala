@@ -15,7 +15,7 @@ import scala.collection.mutable
  * Calculate final score of topK as (\lambda * s_1/(s) + (1-\lambda)*s'_1/(s'), ...)
  * s and s' will be the initial score of source or the total score of entire graph in FPPR and BPPR
  */
-object ForwardBackwardPPRRanking extends OutputWriter[String] with ArgLoader{
+object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[String] with ArgLoader{
 
   // Keys that we will write
   val stringKeys = Seq("title", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank")
@@ -24,7 +24,7 @@ object ForwardBackwardPPRRanking extends OutputWriter[String] with ArgLoader{
    * Load graph and save to graph variable
    * @param args All the needed variables
    */
-  def Loader(args: Array[String]): Unit = {
+  def load(args: Array[String]): Unit = {
 
     argLoader(args) // Load all common arguments
 
@@ -59,14 +59,13 @@ object ForwardBackwardPPRRanking extends OutputWriter[String] with ArgLoader{
     }
   }
 
-  //if (arg.filter(_ == elem._1).length>0) 1/arg.length.toDouble else 0.0
-
   def SetInitialP(arg: Array[Long]): RDD[(VertexId, Double)] ={
     vertices.map(elem => (elem._1, if (arg.filter(_ == elem._1).length>0) 1/arg.length.toDouble else 0.0))
   }
-/**
-* Run FBPPR
-*/
+
+  /**
+  * Run FBPPR
+  */
   def run(): Unit = {
     var Initial_node = Array[Long](queryId)
     val newgraph = Graph(SetInitialP(Initial_node), edges)
