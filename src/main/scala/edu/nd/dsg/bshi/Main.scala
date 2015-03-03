@@ -55,57 +55,12 @@ object Main {
     if (args.length < 8) {
       println("usage: alpha queryId maxIter topK nCores edgeFilePath titleFilePath outputPath")
       return
-    } else {
-      alpha = args(0).toDouble
-      queryId = args(1).toLong
-      maxIter = args(2).toInt
-      topK = args(3).toInt
-      nCores = args(4).toInt
-      filePath = args(5)
-      titlePath = args(6)
-      outputPath = args(7)
     }
 
-    // Load article_list
 
-    val titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
-      val tmp = x.split("\",\"").toList
-      Map[VertexId, String]((tmp(0).replace("\"","").toLong, tmp(1).replaceAll("\\p{P}", " ")))
-    }).reduce(_++_)
-
-    println("title map loaded")
-
-    val conf = new SparkConf()
-      .setMaster("local["+nCores.toString+"]")
-      .setAppName("Citation PageRank")
-      .set("spark.executor.memory", "1g")
-      .set("spark.driver.memory", "1g")
-      .set("spark.driver.maxResultSize", "1g")
-    val sc = new SparkContext(conf)
-
-    // Input file should be space separated e.g. "src dst", one edge per line
-    val file = sc.textFile(filePath).map(x => x.split(" ").map(_.toInt))
-
-    val vertices: RDD[(VertexId, Double)] = sc.parallelize(file.map(_.toSet).reduce(_++_).toSeq.map(x => (x.toLong, 0.0)))
-
-    val edges: RDD[Edge[Boolean]] = sc.textFile(filePath).map(x => {
-      val endPoints = x.split(" ").map(_.toInt)
-      Edge(endPoints(0), endPoints(1), true)
-    })
-
-    val graph = Graph(vertices, edges)
-
-    Seq("Graph statistics:",
-      "--Vertices:"+graph.numVertices,
-      "--Edges"+graph.numEdges,
-      "--OutDeg==0:"+graph.outDegrees.filter(_._2==0l).count()).foreach(println)
-
-    if(graph.vertices.filter(_._1 == queryId).count() == 0) {
-      println("QueryId ", queryId, " does not exist!")
-      sc.stop()
-      return
-    }
-
+    ForwardBackwardPPRRanking.Loader(args)
+    ForwardBackwardPPRRanking.run()
+    /*
     // For final output
     val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
 
@@ -178,6 +133,6 @@ object Main {
       writer.write((tuple ++ tupleRest).reduce(_+","+_)+"\n")
     })
 
-    writer.close()
+    writer.close()*/
   }
 }
