@@ -43,11 +43,11 @@ object DataExtractor {
                                               titleMap: Map[VertexId, String],
                                               idSet: Set[VertexId]): Seq[(VertexId, String, Int, Double)] = {
     val tmpRes = graph.vertices.sortBy(_._2, ascending = false) // Sort all nodes by its PR score in descending order
-      .collect() // collect to master, this may be very expensive
+      .zipWithIndex() // add index to RDD
 
-    tmpRes.zip(tmpRes.indices) // zip with index
-      .filter(e => idSet.contains(e._1._1)) // get all nodes that in idSet
-      .map(x => (x._1._1, titleMap.getOrElse(x._1._1, ""), x._2, x._1._2)) // (vid, title of that vid, rank, score)
+    tmpRes.filter(e => idSet.contains(e._1._1)) // get all nodes that in idSet
+      .map(x => (x._1._1, titleMap.getOrElse(x._1._1, ""), x._2.toInt, x._1._2)) // (vid, title of that vid, rank, score)
+      .collect() // convert RDD to Seq
   }
 
   /**
@@ -61,12 +61,7 @@ object DataExtractor {
   def extractNodeFromPageRank[ED: ClassTag](graph: Graph[Double, ED],
                                                      titleMap: Map[VertexId, String],
                                                      source: VertexId): Seq[(VertexId, String, Int, Double)] = {
-    val tmpRes = graph.vertices.sortBy(_._2, ascending = false) // Sort all nodes by its PR score in descending order
-      .collect() // collect to master, this may be very expensive
-
-    tmpRes.zip(tmpRes.indices) // zip with index
-      .filter(_._1._1 == source) // get only source node
-      .map(x => (x._1._1, titleMap.getOrElse(x._1._1, ""), x._2, x._1._2))
+    extractNodeFromPageRank(graph, titleMap, Set[VertexId](source))
   }
 
 }
