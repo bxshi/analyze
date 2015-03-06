@@ -15,7 +15,7 @@ trait ArgLoader {
   var titlePath = ""
   var outputPath = ""
   var nCores = 4
-
+  var c=10
   var vertices: RDD[(VertexId, Double)] = null
   var edges: RDD[Edge[Boolean]] = null
   var graph: Graph[Double,Boolean]=null  // original graph
@@ -34,7 +34,7 @@ trait ArgLoader {
     titlePath = args(6)
     outputPath = args(7)
     // Load article_list
-
+    c = args(8).toInt
     titleMap = scala.io.Source.fromFile(titlePath).getLines().map(x => {
       val tmp = x.split("\",\"").toList
       Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))

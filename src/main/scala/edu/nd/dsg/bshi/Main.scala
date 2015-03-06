@@ -11,8 +11,8 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 8) {
-      println("usage: alpha queryId maxIter topK nCores edgeFilePath titleFilePath outputPath")
+    if (args.length < 9) {
+      println("usage: alpha queryId maxIter topK nCores edgeFilePath titleFilePath outputPath c")
       return
     }
 

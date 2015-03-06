@@ -18,7 +18,7 @@ import scala.collection.mutable
 object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[String] {
 
   // Keys that we will write
-  val stringKeys = Seq("title", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank")
+  val stringKeys = Seq("title", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank","Num_of_rel")
 
   /**
    * Load graph and save to graph variable
@@ -61,9 +61,10 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
   * Run FBPPR
   */
   def run(): Unit = {
+    println(math.pow((1-alpha),c.toDouble))
+
     var Initial_node = Array[Long](queryId)
     val newgraph = Graph(setInitialP(Initial_node), edges)
-
     val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, maxIter ,alpha)
     val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap,topK)
 
@@ -88,6 +89,8 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
       val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
       finalResult(elem._1)("bppr_score") = ans.head._4.toString
       finalResult(elem._1)("bppr_rank") = ans.head._3.toString
+      finalResult(elem._1)("Num_of_rel") = resGraph.vertices.filter(x=> x._2> math.pow((1-alpha),c.toDouble)).count().toString
+      println(finalResult(elem._1)("Num_of_rel"))
     })
 
     writeResult(outputPath, finalResult, stringKeys)
