@@ -1,6 +1,9 @@
 package edu.nd.dsg.bshi
 
+import edu.nd.dsg.bshi.PairwisePPR._
 import org.apache.spark.graphx.{Graph, Edge}
+
+import scala.collection.mutable
 
 /**
  * 1) Do PPR on a query point first, and then keep all the scores on each node,
@@ -11,7 +14,14 @@ import org.apache.spark.graphx.{Graph, Edge}
  */
 object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String] {
 
-  val stringKeys = Seq("title", "fppr_score", "fppr_rank", "bpr_score", "bpr_rank")
+  val stringKeys = Seq("pr_converge_rank", "pr_converge_score",
+    "ppr_converge_rank", "ppr_converge_score",
+    "bpr_converge_rank", "bpr_converge_score",
+    "bpr_1_rank", "bpr_1_score",
+    "bpr_2_rank", "bpr_2_score",
+    "bpr_3_rank", "bpr_3_score",
+    "bpr_4_rank", "bpr_4_score",
+    "bpr_5_rank", "bpr_5_score")
 
   val delta = 0.001
 
@@ -21,14 +31,12 @@ object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String]
 
     val sc = createSparkInstance()
 
-    val file = sc.textFile(filePath).map(x => x.split(" ").map(_.toInt))
+    val file = sc.textFile(config.filePath).filter(!_.contains("#"))
+      .map(x => x.split("\\s").map(_.toInt))
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
 
-    edges = sc.textFile(filePath).map(x => {
-      val endPoints = x.split(" ").map(_.toInt)
-      Edge(endPoints(0), endPoints(1), true)
-    })
+    edges = file.map(x => Edge(x(0), x(1), true))
 
     graph = Graph(vertices, edges)
 
@@ -36,8 +44,8 @@ object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String]
       "--Vertices: " + graph.numVertices,
       "--Edges:    " + graph.numEdges).foreach(println)
 
-    if (graph.vertices.filter(_._1 == queryId).count() == 0) {
-      println("QueryId ", queryId, " does not exist!")
+    if (graph.vertices.filter(_._1 == config.queryId).count() == 0) {
+      println("QueryId ", config.queryId, " does not exist!")
       sc.stop()
       return
     }
@@ -46,25 +54,61 @@ object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String]
 
   def run(): Unit = {
     // First get a converged PageRank result
-    val prGraph = PageRank.runUntilConvergence(graph, tol = delta, resetProb = alpha)
+    val prGraph = PageRank.runUntilConvergence(graph, tol = delta, resetProb = config.alpha)
 
     println("pr done")
+
+    // Log result
+    val prRes = DataExtractor.extractTopKFromPageRank(prGraph, titleMap, prGraph.numVertices.toInt)
+
+    prRes.foreach(elem => {
+      if (!finalResult.contains(elem._1)) {
+        finalResult(elem._1) = new mutable.HashMap[String, String]()
+
+      }
+      finalResult(elem._1)("pr_converge_score") = elem._4.toString
+      finalResult(elem._1)("pr_converge_rank") = elem._3.toString
+    })
+
+    println("pr stored")
+
     // Run PPR first
-    val fpprGraph = PersonalizedPageRank.runUntilConvergence(graph, source = queryId,
-      tol = delta, resetProb = alpha)
+    val fpprGraph = PersonalizedPageRank.runUntilConvergence(graph, source = config.queryId,
+      tol = delta, resetProb = config.alpha)
     println("fppr done")
     // Check difference between PR and PPR
 
-    DataExtractor.extractTopKFromPageRank(fpprGraph, titleMap, topK).foreach(println)
+    val pprRes = DataExtractor.extractTopKFromPageRank(fpprGraph, titleMap, fpprGraph.numVertices.toInt)
+    pprRes.foreach(elem => {
+      finalResult(elem._1)("ppr_converge_score") = elem._4.toString
+      finalResult(elem._1)("ppr_converge_rank") = elem._3.toString
+    })
 
-    // Run PR w/ score
-    val bprGraph = PageRank.runWithInitialScoreUntilConvergence(fpprGraph.reverse, tol = delta, resetProb = alpha)
-    println("bpr done")
-    // Check difference between PR and PPR
+    println("fppr stored")
+    // Run backward PR until converge
+//
+//    val bprGraph = PageRank.runWithInitialScoreUntilConvergence(fpprGraph.reverse, tol = delta, resetProb = alpha)
+//    println("bpr done")
+//
+//    val bprRes = DataExtractor.extractTopKFromPageRank(bprGraph, titleMap, bprGraph.numVertices.toInt)
+//    bprRes.foreach(elem => {
+//      finalResult(elem._1)("bpr_converge_score") = elem._4.toString
+//      finalResult(elem._1)("bpr_converge_rank") = elem._3.toString
+//    })
 
-    // Output topK for test purpose
+//    println("bpr stored")
 
-    DataExtractor.extractTopKFromPageRank(bprGraph, titleMap, topK).foreach(println)
+    for(iterNum <- 1 to 15) {
+      val bprIterGraph = PageRank.runWithInitialScore(fpprGraph.reverse, iterNum, config.alpha)
+      DataExtractor.extractTopKFromPageRank(bprIterGraph, titleMap, bprIterGraph.numVertices.toInt)
+        .foreach(elem => {
+        finalResult(elem._1)("bpr_"+iterNum.toString+"_score") = elem._4.toString
+        finalResult(elem._1)("bpr_"+iterNum.toString+"_rank") = elem._3.toString
+      })
+      println("bpr"+iterNum.toString+" stored")
+    }
+
+    writeResult(config.outPath, finalResult, stringKeys)
 
   }
 

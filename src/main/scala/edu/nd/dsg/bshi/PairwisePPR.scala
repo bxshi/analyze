@@ -13,15 +13,12 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
     argLoader(args)
     val sc = createSparkInstance()
 
-    // Input file should be space separated e.g. "src dst", one edge per line
-    val file = sc.textFile(filePath).map(x => x.split(" ").map(_.toInt))
+    val file = sc.textFile(config.filePath).filter(!_.contains("#"))
+      .map(x => x.split("\\s").map(_.toInt))
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
 
-    edges = sc.textFile(filePath).map(x => {
-      val endPoints = x.split(" ").map(_.toInt)
-      Edge(endPoints(0), endPoints(1), true)
-    })
+    edges = file.map(x => Edge(x(0), x(1), true))
 
     graph = Graph(vertices, edges)
 
@@ -29,8 +26,8 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
       "--Vertices: " + graph.numVertices,
       "--Edges:    " + graph.numEdges).foreach(println)
 
-    if (graph.vertices.filter(_._1 == queryId).count() == 0) {
-      println("QueryId ", queryId, " does not exist!")
+    if (graph.vertices.filter(_._1 == config.queryId).count() == 0) {
+      println("QueryId ", config.queryId, " does not exist!")
       sc.stop()
       return
     }
@@ -39,10 +36,10 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
   override def run(): Unit = {
 
     val fpprGraph = PersonalizedPageRank.runWithInitialScore(
-      graph.mapVertices((vid, vd) => if(vid == queryId) 1.0 else 0.0),
-      queryId, maxIter, alpha)
+      graph.mapVertices((vid, vd) => if(vid == config.queryId) 1.0 else 0.0),
+      config.queryId, config.maxIter, config.alpha)
 
-    val fpprTopK = DataExtractor.extractTopKFromPageRank(fpprGraph, titleMap, topK)
+    val fpprTopK = DataExtractor.extractTopKFromPageRank(fpprGraph, titleMap, config.topK)
     val candidateSet = fpprTopK.map(_._1).toSet
 
     // Log top K + 1
@@ -52,13 +49,13 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
 
       }
       finalResult(elem._1)("title") = elem._2
-      finalResult(elem._1)(queryId.toString+"_score") = elem._4.toString
-      finalResult(elem._1)(queryId.toString+"_rank") = elem._3.toString
+      finalResult(elem._1)(config.queryId.toString+"_score") = elem._4.toString
+      finalResult(elem._1)(config.queryId.toString+"_rank") = elem._3.toString
     })
 
-    fpprTopK.filter(_._1 != queryId).foreach(elem => {
+    fpprTopK.filter(_._1 != config.queryId).foreach(elem => {
       val revGraph = graph.reverse.mapVertices((vid, vd) => if(vid == elem._1) 1.0 else 0.0)
-      val bpprGraph = PersonalizedPageRank.runWithInitialScore(revGraph, elem._1, maxIter, alpha)
+      val bpprGraph = PersonalizedPageRank.runWithInitialScore(revGraph, elem._1, config.maxIter, config.alpha)
 
       DataExtractor.extractNodeFromPageRank(bpprGraph, titleMap, candidateSet).foreach(x => {
         finalResult(x._1)(elem._1.toString+"_score") = x._4.toString
@@ -71,7 +68,7 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
       candidateSet.map(_.toString+"_score").toSeq
 
 //    printResult(finalResult, finalKeys)
-    writeResult(outputPath, finalResult, finalKeys)
+    writeResult(config.outPath, finalResult, finalKeys)
 
   }
 
