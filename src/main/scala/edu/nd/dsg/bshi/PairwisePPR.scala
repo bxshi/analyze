@@ -13,15 +13,12 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
     argLoader(args)
     val sc = createSparkInstance()
 
-    // Input file should be space separated e.g. "src dst", one edge per line
-    val file = sc.textFile(config.filePath).map(x => x.split(" ").map(_.toInt))
+    val file = sc.textFile(config.filePath).filter(!_.contains("#"))
+      .map(x => x.split("\\s").map(_.toInt))
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
 
-    edges = sc.textFile(config.filePath).map(x => {
-      val endPoints = x.split(" ").map(_.toInt)
-      Edge(endPoints(0), endPoints(1), true)
-    })
+    edges = file.map(x => Edge(x(0), x(1), true))
 
     graph = Graph(vertices, edges)
 
