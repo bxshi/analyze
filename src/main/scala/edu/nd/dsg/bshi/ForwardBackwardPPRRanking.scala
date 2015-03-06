@@ -31,7 +31,7 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
     val sc = createSparkInstance()
 
     // Input file should be space separated e.g. "src dst", one edge per line
-    val file = sc.textFile(filePath).filter(!_.contains("#"))
+    val file = sc.textFile(config.filePath).filter(!_.contains("#"))
       .map(x => x.split("\\s").map(_.toInt))
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
@@ -44,8 +44,8 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
       "--Vertices: " + graph.numVertices,
       "--Edges:    " + graph.numEdges).foreach(println)
 
-    if (graph.vertices.filter(_._1 == queryId).count() == 0) {
-      println("QueryId ", queryId, " does not exist!")
+    if (graph.vertices.filter(_._1 == config.queryId).count() == 0) {
+      println("QueryId ", config.queryId, " does not exist!")
       sc.stop()
       return
     }
@@ -59,12 +59,12 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
   * Run FBPPR
   */
   def run(): Unit = {
-    println(math.pow((1-alpha),c.toDouble))
+    println(math.pow(1-config.alpha,config.c.toDouble))
 
-    var Initial_node = Array[Long](queryId)
+    var Initial_node = Array[Long](config.queryId)
     val newgraph = Graph(setInitialP(Initial_node), edges)
-    val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, maxIter ,alpha)
-    val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap,topK)
+    val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, config.queryId, config.maxIter, config.alpha)
+    val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap, config.topK)
 
     fpprRankTopK.foreach(elem =>{
       if (!finalResult.contains(elem._1)) {
@@ -83,15 +83,16 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
     fpprRankTopK.foreach(elem => {
       Initial_node = Array[Long](elem._1)
       val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
-      val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, maxIter, alpha)
-      val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
+      val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
+      val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, config.queryId)
       finalResult(elem._1)("bppr_score") = ans.head._4.toString
       finalResult(elem._1)("bppr_rank") = ans.head._3.toString
-      finalResult(elem._1)("Num_of_rel") = resGraph.vertices.filter(x=> x._2> math.pow((1-alpha),c.toDouble)).count().toString
+      finalResult(elem._1)("Num_of_rel") = resGraph.vertices.filter(
+        x=> x._2 > math.pow(1-config.alpha, config.c.toDouble)).count().toString
       println(finalResult(elem._1)("Num_of_rel"))
     })
 
-    writeResult(outputPath, finalResult, stringKeys)
+    writeResult(config.outPath, finalResult, stringKeys)
     println("Finished!")
   }
 

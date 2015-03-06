@@ -9,10 +9,14 @@ resolvers ++= Seq(
   "Spray Repository" at "http://repo.spray.cc/",
   "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/")
 
+resolvers += Resolver.sonatypeRepo("public")
+
 libraryDependencies += "org.apache.spark" % "spark-core_2.10" % "1.2.0"
 
 libraryDependencies += "org.apache.spark" % "spark-graphx_2.10" % "1.2.0"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.2.4"
+
+libraryDependencies += "com.github.scopt" %% "scopt" % "3.3.0"
 
 parallelExecution in Test := false

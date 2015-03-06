@@ -11,14 +11,12 @@ import scala.collection.mutable
  */
 object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputWriter[String] {
 
-  val stringKeys = Seq("10iter", "20iter", "30iter", "40iter", "50iter")
-
   override def load(args: Array[String]): Unit = {
     argLoader(args)
 
     val sc = createSparkInstance()
 
-    val file = sc.textFile(filePath).filter(!_.contains("#"))
+    val file = sc.textFile(config.filePath).filter(!_.contains("#"))
       .map(x => x.split("\\s").map(_.toInt))
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
@@ -34,7 +32,7 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
 
   override def run(): Unit = {
 
-    Seq(10,20,30,40,50).foreach(iter => {
+    Range(config.lpaStart, config.lpastep, config.lpaEnd).foreach(iter => {
       val resGraph = LabelPropagation.run(graph, 10)
 
       resGraph.vertices.countByValue().foreach(println)
@@ -47,7 +45,7 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
       })
     })
 
-    writeResult(outputPath, finalResult, stringKeys)
+    writeResult(config.outPath, finalResult, Range(config.lpaStart, config.lpastep, config.lpaEnd).map(_.toString+"iter"))
 
   }
 }
