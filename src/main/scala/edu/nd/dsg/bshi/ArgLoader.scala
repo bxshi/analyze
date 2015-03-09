@@ -31,7 +31,8 @@ trait ArgLoader {
                     titlePath: String = "",// Path of title-id map, should be on local disk
                     outPath: String = "", // Output path, should be a local location
                    // Misc
-                    nCores: Int = 4 // Number of cores for Spark
+                    nCores: Int = 4, // Number of cores for Spark
+                    file: String = "" // log4j properties
    )
 
   val parser = new scopt.OptionParser[Config]("analyze") {
@@ -85,6 +86,10 @@ trait ArgLoader {
       (x,c) => c.copy(nCores = x)
     } text "Number of cores for Spark"
 
+    opt[String]("file") action {
+      (x,c) => c.copy(file = x)
+    } text "Log4j properties file"
+
   }
 
   def argLoader(args: Array[String]): Unit = {
@@ -94,18 +99,13 @@ trait ArgLoader {
 
         // Some warnings
         if (conf.queryId == 0l) println("QueryId was not specified")
+        if (conf.titlePath.isEmpty) println("TitleMap was not specified, there will be not title/text associated to ids")
 
         config = conf
       case None =>
         println("Here are some error about argument parsing, please check the source code and --help to make sure everything is fine.")
         System.exit(233)
     }
-
-    // Load article_list
-    titleMap = scala.io.Source.fromFile(config.titlePath).getLines().map(x => {
-      val tmp = x.split("\",\"").toList
-      Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
-    }).reduce(_ ++ _)
 
   }
 
