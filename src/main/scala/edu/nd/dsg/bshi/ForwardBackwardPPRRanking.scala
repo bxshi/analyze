@@ -30,6 +30,13 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
     
     val sc = createSparkInstance()
 
+    if (!config.titlePath.isEmpty) {
+      titleMap = sc.textFile(config.titlePath).map(x => {
+        val tmp = x.split("\",\"").toList
+        Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+      }).reduce(_ ++ _)
+    }
+
     // Input file should be space separated e.g. "src dst", one edge per line
     val file = sc.textFile(config.filePath).filter(!_.contains("#"))
       .map(x => x.split("\\s").map(_.toInt))

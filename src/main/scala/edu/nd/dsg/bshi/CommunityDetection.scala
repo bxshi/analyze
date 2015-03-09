@@ -16,6 +16,13 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
 
     val sc = createSparkInstance()
 
+    if (!config.titlePath.isEmpty) {
+      titleMap = sc.textFile(config.titlePath).map(x => {
+        val tmp = x.split("\",\"").toList
+        Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+      }).reduce(_ ++ _)
+    }
+
     val file = sc.textFile(config.filePath).filter(!_.contains("#"))
       .map(x => x.split("\\s").map(_.toInt))
 
@@ -31,13 +38,12 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
   }
 
   override def run(): Unit = {
+    println("enter run")
+    Range(config.lpaStart, config.lpaEnd, config.lpastep).foreach(iter => {
+      println("LPA iter "+iter.toString)
+      val resGraph = LabelPropagation.run(graph, iter)
 
-    Range(config.lpaStart, config.lpastep, config.lpaEnd).foreach(iter => {
-      val resGraph = LabelPropagation.run(graph, 10)
-
-      resGraph.vertices.countByValue().foreach(println)
-
-      resGraph.vertices.foreach(x => {
+      resGraph.vertices.collect().foreach(x => {
         if (!finalResult.contains(x._1)) {
           finalResult(x._1) = new mutable.HashMap[String, String]()
         }
@@ -45,7 +51,7 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
       })
     })
 
-    writeResult(config.outPath, finalResult, Range(config.lpaStart, config.lpastep, config.lpaEnd).map(_.toString+"iter"))
+    writeResult(config.outPath, finalResult, Range(config.lpaStart, config.lpaEnd, config.lpastep).map(_.toString+"iter"))
 
   }
 }
