@@ -30,6 +30,8 @@ trait ArgLoader {
                     filePath: String = "", // Path of file, should be on hdfs
                     titlePath: String = "",// Path of title-id map, should be on local disk
                     outPath: String = "", // Output path, should be a local location
+                    sample: Int = 5, // Number of sample nodes
+                    directed: Boolean = true, // Whether this is a directed graph or not
                    // Misc
                     nCores: Int = 4, // Number of cores for Spark
                     file: String = "" // log4j properties
@@ -65,6 +67,14 @@ trait ArgLoader {
     opt[Int]("lpaEnd") action {
       (x,c) => c.copy(lpaEnd = x)
     } text "Max iteration of LPA community detection"
+
+    opt[Int]('s', "sample") action {
+      (x,c) => c.copy(sample = x)
+    } text "Number of random starting nodes, default is 5"
+
+    opt[Boolean]('d', "directed") action {
+      (x,c) => c.copy(directed = x)
+    } text "directed graph or not, default is directed graph"
 
     opt[VertexId]('q', "query") action {
       (x,c) => c.copy(queryId = x)

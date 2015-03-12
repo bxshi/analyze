@@ -4,7 +4,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
 
-    CommunityDetection.load(args)
-    CommunityDetection.run()
+    ForwardBackwardPPRRanking.load(args)
+    ForwardBackwardPPRRanking.run()
   }
 }
