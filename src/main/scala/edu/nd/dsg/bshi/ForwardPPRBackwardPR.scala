@@ -116,7 +116,7 @@ object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String]
       println("bpr"+iterNum.toString+" stored")
     }
 
-    writeResult(config.outPath, finalResult, stringKeys)
+    writeResult(config.outPath, finalResult)
 
   }
 

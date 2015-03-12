@@ -16,11 +16,10 @@ trait OutputWriter[T] {
    * Write result to a file
    * @param filePath output file path
    * @param resMap a nested output HashMap {id:{key:val, ...}, ...}
-   * @param stringKeys a list of keys in HashMap
    */
   def writeResult(filePath: String,
                   resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
-                  stringKeys: Seq[String]): Unit = {
+                  stringKeys: Seq[String] = Seq[String]()): Unit = {
     val writer = new PrintWriter(new File(filePath))
 
     writer.write(resToString(resMap, stringKeys))
@@ -29,19 +28,21 @@ trait OutputWriter[T] {
 
   }
 
-  def resToString(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
-               stringKeys: Seq[String]): String = {
+  def resToString(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]], stringKeys: Seq[String] = Seq[String]()): String = {
     val str = new mutable.StringBuilder
-    str.append((Seq("id") ++ stringKeys).reduce(_+","+_)+"\n")
+    val keys = if(resMap.size > 0) {
+      resMap.map(_._2.keySet).reduce(_ ++ _) ++ stringKeys.toSet
+    }.toSeq  else stringKeys
+    str.append((Seq("id") ++ keys).reduce(_+","+_)+"\n")
     resMap.map(elem => {
-      val tuple = Seq(elem._1.toString) ++ stringKeys.map(x => elem._2.getOrElse(x, "NA").toString).map(_.replace(","," "))
+      val tuple = Seq(elem._1.toString) ++ keys.map(x => elem._2.getOrElse(x, "NA").toString).map(_.replace(","," "))
       str.append(tuple.reduce(_+","+_)+"\n")
     })
     str.toString()
   }
 
   def printResult(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
-                  stringKeys: Seq[String]): Unit = {
+                  stringKeys: Seq[String] = Seq[String]()): Unit = {
     print(resToString(resMap, stringKeys))
   }
 

@@ -28,7 +28,7 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
 
     vertices = sc.parallelize(file.map(_.toSet).reduce(_ ++ _).toSeq.map(x => (x.toLong, 0.0)))
 
-    edges = file.map(x => Edge(x(0), x(1), true))
+    edges = file.map(x => Edge(x(0), x(1), true)) ++ file.map(x => Edge(x(1), x(0), true))
 
     graph = Graph(vertices, edges)
 
@@ -51,7 +51,7 @@ object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputW
       })
     })
 
-    writeResult(config.outPath, finalResult, Range(config.lpaStart, config.lpaEnd, config.lpastep).map(_.toString+"iter"))
+    writeResult(config.outPath, finalResult)
 
   }
 }

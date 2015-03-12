@@ -75,7 +75,7 @@ object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
       candidateSet.map(_.toString+"_score").toSeq
 
 //    printResult(finalResult, finalKeys)
-    writeResult(config.outPath, finalResult, finalKeys)
+    writeResult(config.outPath, finalResult)
 
   }
 
