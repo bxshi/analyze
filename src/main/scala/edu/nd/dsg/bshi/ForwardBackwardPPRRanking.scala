@@ -26,8 +26,17 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
 
     if (!config.titlePath.isEmpty) {
       titleMap = sc.textFile(config.titlePath).map(x => {
-        val tmp = x.split("\",\"").toList
-        Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+        val tmp = if(x.split("\",\"").toList.size == 1) {
+          x.split("[\\s,]").toList
+        } else x.split("\",\"").toList
+        try{
+          Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+        } catch {
+          case _: Exception => {
+            println(x, tmp, tmp.size)
+            Map[VertexId, String]((tmp(0).replace("\"", "").toLong, "UNKNOWN_NODE"))
+          }
+        }
       }).reduce(_ ++ _)
     }
 
