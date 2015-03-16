@@ -13,7 +13,7 @@ trait ArgLoader {
   var graph: Graph[Double,Boolean]=null  // original graph
   // final result {vid:{key1:val1, key2:val2, ...}}
   val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
-  var titleMap :Map[VertexId, String] = null
+  var titleMap :Map[VertexId, String] = Map[VertexId, String]()
 
   // Config file
   case class Config(
