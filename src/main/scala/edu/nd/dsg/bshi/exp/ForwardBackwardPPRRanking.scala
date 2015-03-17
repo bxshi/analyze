@@ -1,5 +1,6 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.exp
 
+import edu.nd.dsg.bshi.lib.{DataExtractor, ExperimentTemplate, OutputWriter, PersonalizedPageRank}
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 
@@ -12,13 +13,13 @@ import scala.collection.mutable
  * Calculate final score of topK as (\lambda * s_1/(s) + (1-\lambda)*s'_1/(s'), ...)
  * s and s' will be the initial score of source or the total score of entire graph in FPPR and BPPR
  */
-object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[String] {
+object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputWriter[String] {
 
   /**
    * Load graph and save to graph variable
    * @param args All the needed variables
    */
-  def load(args: Array[String]): Unit = {
+  override def load(args: Array[String]): Unit = {
 
     argLoader(args) // Load all common arguments
     
@@ -26,8 +27,17 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
 
     if (!config.titlePath.isEmpty) {
       titleMap = sc.textFile(config.titlePath).map(x => {
-        val tmp = x.split("\",\"").toList
-        Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+        val tmp = if(x.split("\",\"").toList.size == 1) {
+          x.split("[\\s,]").toList
+        } else x.split("\",\"").toList
+        try{
+          Map[VertexId, String]((tmp(0).replace("\"", "").toLong, tmp(1).replaceAll("\\p{P}", " ")))
+        } catch {
+          case _: Exception => {
+            println(x, tmp, tmp.size)
+            Map[VertexId, String]((tmp(0).replace("\"", "").toLong, "UNKNOWN_NODE"))
+          }
+        }
       }).reduce(_ ++ _)
     }
 
@@ -68,7 +78,8 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate with OutputWriter[St
 
     val sampledNodes = if(config.queryId == 0l) {
       val tmp = graph.vertices.innerJoin(graph.outDegrees)((vid, data, outdeg) => outdeg)
-        .filter(_._2 >= 10)
+        .innerJoin(graph.inDegrees)((vid, data, indeg) => (data, indeg))
+        .filter(x=> x._2._1 >= 10 && x._2._2 >= 10)
 
       println(tmp.count(), config.sample.toDouble,config.sample.toDouble / tmp.count())
 

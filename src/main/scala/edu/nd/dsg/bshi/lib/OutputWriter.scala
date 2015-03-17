@@ -1,4 +1,4 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.lib
 
 import java.io.{File, PrintWriter}
 

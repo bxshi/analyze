@@ -1,6 +1,6 @@
 package edu.nd.dsg.bshi.test
 
-import edu.nd.dsg.bshi.PersonalizedPageRank
+import edu.nd.dsg.bshi.lib.PersonalizedPageRank
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}

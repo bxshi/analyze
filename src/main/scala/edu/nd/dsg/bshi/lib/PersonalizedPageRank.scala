@@ -1,7 +1,8 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.lib
+
+import org.apache.spark.graphx._
 
 import scala.reflect.ClassTag
-import org.apache.spark.graphx._
 
 //TODO: Implement customized score initialization
 object PersonalizedPageRank {

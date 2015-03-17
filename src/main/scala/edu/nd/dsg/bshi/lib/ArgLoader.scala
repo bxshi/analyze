@@ -1,19 +1,19 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.lib
 
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 
 import scala.collection.mutable
 
-trait ArgLoader {
+trait ArgLoader[T] {
 
   var config: Config = null
-  var vertices: RDD[(VertexId, Double)] = null
+  var vertices: RDD[(VertexId, T)] = null
   var edges: RDD[Edge[Boolean]] = null
-  var graph: Graph[Double,Boolean]=null  // original graph
+  var graph: Graph[T,Boolean]=null  // original graph
   // final result {vid:{key1:val1, key2:val2, ...}}
   val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
-  var titleMap :Map[VertexId, String] = null
+  var titleMap :Map[VertexId, String] = Map[VertexId, String]()
 
   // Config file
   case class Config(
@@ -29,12 +29,15 @@ trait ArgLoader {
                     queryId: VertexId = 0l,// Query id, usually the starting point of PPR
                     filePath: String = "", // Path of file, should be on hdfs
                     titlePath: String = "",// Path of title-id map, should be on local disk
+                    datePath: String = "", // File contains date information
+                    queryPath: String = "", // Path of query pairs
                     outPath: String = "", // Output path, should be a local location
                     sample: Int = 5, // Number of sample nodes
                     directed: Boolean = true, // Whether this is a directed graph or not
                    // Misc
                     nCores: Int = 4, // Number of cores for Spark
-                    file: String = "" // log4j properties
+                    file: String = "", // log4j properties
+                    exp: String = "" // Which experiment to run
    )
 
   val parser = new scopt.OptionParser[Config]("analyze") {
@@ -86,7 +89,15 @@ trait ArgLoader {
 
     opt[String]('t', "title") action {
       (x,c) => c.copy(titlePath = x)
-    } text "Path of title-id map, should be on local disk"
+    } text "Path of title-id map"
+
+    opt[String]("date") action {
+      (x,c) => c.copy(datePath = x)
+    } text "Path of dates"
+
+    opt[String]("queryPath") action {
+      (x,c) => c.copy(queryPath = x)
+    } text "Path of query pairs"
 
     opt[String]('o',"output") required() action {
       (x,c) => c.copy(outPath = x)
@@ -99,6 +110,10 @@ trait ArgLoader {
     opt[String]("file") action {
       (x,c) => c.copy(file = x)
     } text "Log4j properties file"
+
+    opt[String]("exp") required() action {
+      (x,c) => c.copy(exp = x)
+    } text "Which experiment to run"
 
   }
 

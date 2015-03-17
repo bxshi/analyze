@@ -1,7 +1,6 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.exp
 
-import edu.nd.dsg.bshi.CommunityDetection._
-import edu.nd.dsg.bshi.PairwisePPR._
+import edu.nd.dsg.bshi.lib._
 import org.apache.spark.graphx._
 
 import scala.collection.mutable
@@ -13,7 +12,7 @@ import scala.collection.mutable
  * 2) Do this several times and see if this can converge(degenerate) to PR
  *
  */
-object ForwardPPRBackwardPR extends ExperimentTemplate with OutputWriter[String] {
+object ForwardPPRBackwardPR extends ExperimentTemplate[Double] with OutputWriter[String] {
 
   val stringKeys = Seq("pr_converge_rank", "pr_converge_score",
     "ppr_converge_rank", "ppr_converge_score",
