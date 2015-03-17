@@ -18,7 +18,7 @@ object Main extends ArgLoader[String] {
         FindCouplingNodes.load(args)
         FindCouplingNodes.run()
       }
-      case _ => println("unsupported operation", _)
+      case _ => println("unsupported operation", config.exp)
     }
   }
 }
