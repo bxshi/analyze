@@ -1,4 +1,4 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.lib
 
 import org.apache.spark.graphx._
 

@@ -1,7 +1,8 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.exp
 
+import edu.nd.dsg.bshi.lib.{ExperimentTemplate, OutputWriter}
 import org.apache.spark.graphx.lib.LabelPropagation
-import org.apache.spark.graphx.{Edge, VertexId, Graph}
+import org.apache.spark.graphx.{Edge, Graph, VertexId}
 
 import scala.collection.mutable
 
@@ -9,7 +10,7 @@ import scala.collection.mutable
 /**
  * Output community detection for certain iterations
  */
-object CommunityDetection extends ExperimentTemplate with ArgLoader with OutputWriter[String] {
+object CommunityDetection extends ExperimentTemplate[Double] with OutputWriter[String] {
 
   override def load(args: Array[String]): Unit = {
     argLoader(args)

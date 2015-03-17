@@ -1,9 +1,8 @@
 package edu.nd.dsg.bshi.test
 
+import edu.nd.dsg.bshi.lib.OutputWriter
 import org.apache.spark.graphx._
 import org.scalatest.{ShouldMatchers, FunSuite}
-
-import edu.nd.dsg.bshi.OutputWriter
 
 import scala.collection.mutable
 

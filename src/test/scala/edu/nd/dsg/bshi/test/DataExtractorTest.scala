@@ -1,6 +1,6 @@
 package edu.nd.dsg.bshi.test
 
-import edu.nd.dsg.bshi.DataExtractor
+import edu.nd.dsg.bshi.lib.DataExtractor
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, SparkConf}

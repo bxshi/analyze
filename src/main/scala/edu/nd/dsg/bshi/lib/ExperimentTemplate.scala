@@ -1,9 +1,11 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.lib
 
 import org.apache.spark.{SparkConf, SparkContext}
 
-trait ExperimentTemplate extends ArgLoader {
+trait ExperimentTemplate[T] extends ArgLoader[T] {
+
   def load(args: Array[String]): Unit
+
   def run(): Unit
 
   def createSparkInstance(): SparkContext = {

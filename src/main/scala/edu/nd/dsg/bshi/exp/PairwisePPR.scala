@@ -1,11 +1,12 @@
-package edu.nd.dsg.bshi
+package edu.nd.dsg.bshi.exp
 
+import edu.nd.dsg.bshi.lib.{DataExtractor, ExperimentTemplate, OutputWriter, PersonalizedPageRank}
 import org.apache.spark.graphx._
 
 import scala.collection.mutable
 
 
-object PairwisePPR extends ExperimentTemplate with OutputWriter[String] {
+object PairwisePPR extends ExperimentTemplate[Double] with OutputWriter[String] {
 
   val stringKeys = Seq("title")
 
