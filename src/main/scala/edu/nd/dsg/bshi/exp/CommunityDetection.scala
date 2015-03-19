@@ -10,7 +10,7 @@ import scala.collection.mutable
 /**
  * Output community detection for certain iterations
  */
-object CommunityDetection extends ExperimentTemplate[Double] with OutputWriter[String] {
+object CommunityDetection extends ExperimentTemplate[Double] with OutputWriter {
 
   override def load(args: Array[String]): Unit = {
     argLoader(args)
@@ -45,10 +45,10 @@ object CommunityDetection extends ExperimentTemplate[Double] with OutputWriter[S
       val resGraph = LabelPropagation.run(graph, iter)
 
       resGraph.vertices.collect().foreach(x => {
-        if (!finalResult.contains(x._1)) {
-          finalResult(x._1) = new mutable.HashMap[String, String]()
+        if (!finalResult.contains((x._1,x._1))) {
+          finalResult((x._1,x._1)) = new mutable.HashMap[String, String]()
         }
-        finalResult(x._1)(iter.toString + "iter") = x._2.toString
+        finalResult((x._1,x._1))(iter.toString + "iter") = x._2.toString
       })
     })
 
