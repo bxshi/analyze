@@ -10,7 +10,7 @@ import scala.collection.mutable
 /**
  * Trait for csv output
  */
-trait OutputWriter[T] {
+trait OutputWriter {
 
   /**
    * Write result to a file
@@ -18,7 +18,7 @@ trait OutputWriter[T] {
    * @param resMap a nested output HashMap {id:{key:val, ...}, ...}
    */
   def writeResult(filePath: String,
-                  resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
+                  resMap: mutable.HashMap[(VertexId, VertexId), mutable.HashMap[String, String]],
                   stringKeys: Seq[String] = Seq[String]()): Unit = {
     val writer = new PrintWriter(new File(filePath))
 
@@ -28,20 +28,20 @@ trait OutputWriter[T] {
 
   }
 
-  def resToString(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]], stringKeys: Seq[String] = Seq[String]()): String = {
+  def resToString(resMap: mutable.HashMap[(VertexId, VertexId), mutable.HashMap[String, String]], stringKeys: Seq[String] = Seq[String]()): String = {
     val str = new mutable.StringBuilder
     val keys = if(resMap.size > 0) {
       resMap.map(_._2.keySet).reduce(_ ++ _) ++ stringKeys.toSet
     }.toSeq  else stringKeys
-    str.append((Seq("id") ++ keys).reduce(_+","+_)+"\n")
+    str.append((Seq("id", "id2") ++ keys).reduce(_+","+_)+"\n")
     resMap.map(elem => {
-      val tuple = Seq(elem._1.toString) ++ keys.map(x => elem._2.getOrElse(x, "NA").toString).map(_.replace(","," "))
+      val tuple = Seq(elem._1._1.toString, elem._1._2.toString) ++ keys.map(x => elem._2.getOrElse(x, "NA").toString).map(_.replace(","," "))
       str.append(tuple.reduce(_+","+_)+"\n")
     })
     str.toString()
   }
 
-  def printResult(resMap: mutable.HashMap[VertexId, mutable.HashMap[String, T]],
+  def printResult(resMap: mutable.HashMap[(VertexId, VertexId), mutable.HashMap[String, String]],
                   stringKeys: Seq[String] = Seq[String]()): Unit = {
     print(resToString(resMap, stringKeys))
   }

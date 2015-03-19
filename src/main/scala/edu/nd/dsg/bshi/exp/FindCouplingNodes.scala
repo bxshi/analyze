@@ -9,7 +9,7 @@ import org.apache.spark.graphx._
 import scala.collection.mutable
 
 
-object FindCouplingNodes extends ExperimentTemplate[java.util.Date] with OutputWriter[String] {
+object FindCouplingNodes extends ExperimentTemplate[java.util.Date] with OutputWriter {
 
   var queryPairs: Array[(Long, Iterable[Long])] = null
 
@@ -82,7 +82,7 @@ object FindCouplingNodes extends ExperimentTemplate[java.util.Date] with OutputW
 
       val queryNode = graph.vertices.filter(_._1 == queryId).first()
 
-      finalResult(queryId) = new mutable.HashMap[String, String]()
+      finalResult((queryId,queryId)) = new mutable.HashMap[String, String]()
 
       val queryGraph = graph.outerJoinVertices(graph.collectNeighborIds(EdgeDirection.Out)){
         (vid, date, idList) => {
@@ -120,10 +120,10 @@ object FindCouplingNodes extends ExperimentTemplate[java.util.Date] with OutputW
           }
         }
 
-        finalResult(queryId)("appear") = num.toString // number of times that query been cite
-        finalResult(queryId)("ncite") = resPair._1.toString // number of total cites
-        finalResult(queryId)("coappear") = resPair._2.toString // number of co-appearance
-        println(finalResult(queryId))
+        finalResult((queryId,queryId))("appear") = num.toString // number of times that query been cite
+        finalResult((queryId,queryId))("ncite") = resPair._1.toString // number of total cites
+        finalResult((queryId,queryId))("coappear") = resPair._2.toString // number of co-appearance
+        println(finalResult(queryId,queryId))
       })
     })
 

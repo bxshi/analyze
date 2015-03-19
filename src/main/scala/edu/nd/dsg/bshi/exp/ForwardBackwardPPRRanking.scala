@@ -13,7 +13,7 @@ import scala.collection.mutable
  * Calculate final score of topK as (\lambda * s_1/(s) + (1-\lambda)*s'_1/(s'), ...)
  * s and s' will be the initial score of source or the total score of entire graph in FPPR and BPPR
  */
-object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputWriter[String] {
+object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputWriter {
 
   /**
    * Load graph and save to graph variable
@@ -95,13 +95,13 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
       val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap, config.topK)
 
       fpprRankTopK.foreach(elem =>{
-        if (!finalResult.contains(elem._1)) {
-          finalResult(elem._1) = new mutable.HashMap[String, String]()
+        if (!finalResult.contains((elem._1, queryId))) {
+          finalResult((elem._1, queryId)) = new mutable.HashMap[String, String]()
         }
-          finalResult(elem._1)("title") = elem._2.toString
-          finalResult(elem._1)("query_id") = queryId.toString
-          finalResult(elem._1)("fppr_score")=elem._4.toString
-          finalResult(elem._1)("fppr_rank")=elem._3.toString
+          finalResult((elem._1, queryId))("title") = elem._2.toString
+          finalResult((elem._1, queryId))("query_id") = queryId.toString
+          finalResult((elem._1, queryId))("fppr_score")=elem._4.toString
+          finalResult((elem._1, queryId))("fppr_rank")=elem._3.toString
       })
 
       fpprRankTopK.foreach(elem => {
@@ -109,9 +109,9 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
         val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
         val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
         val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
-        finalResult(elem._1)("bppr_score") = ans.head._4.toString
-        finalResult(elem._1)("bppr_rank") = ans.head._3.toString
-        println(finalResult(elem._1))
+        finalResult((elem._1, queryId))("bppr_score") = ans.head._4.toString
+        finalResult((elem._1, queryId))("bppr_rank") = ans.head._3.toString
+        println(finalResult((elem._1, queryId)))
         invgraph.unpersist(blocking = false)
         resGraph.unpersist(blocking = false)
       })
