@@ -12,7 +12,7 @@ trait ArgLoader[T] {
   var edges: RDD[Edge[Boolean]] = null
   var graph: Graph[T,Boolean]=null  // original graph
   // final result {vid:{key1:val1, key2:val2, ...}}
-  val finalResult = mutable.HashMap[VertexId, mutable.HashMap[String, String]]()
+  val finalResult = mutable.HashMap[(VertexId,VertexId), mutable.HashMap[String, String]]()
   var titleMap :Map[VertexId, String] = Map[VertexId, String]()
 
   // Config file
