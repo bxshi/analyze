@@ -42,7 +42,7 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
 }
 
 # Calculate jaccard coefficient
-fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c()) {
+fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .normalized=FALSE) {
   # Set step
   interval <- seq(from = 0, to = 1, by = .by)
   if(length(.interval) != 0) {
@@ -56,19 +56,22 @@ fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c()) {
     score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
     neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
     newtitle <- fbppr.df[order(neworder), "title"]
-    print(paste("l59 ", fbppr.df[neworder, "id"]))
+    
+    # Calculate jaccard coefficient
     coeff <- lapply(fbppr.df[neworder, "id"], function(x){
       # get communities of x
-      comm_x <- unlist(comm[which(comm$id==x),"cluster"])
-      print(paste("node",x," intersect is ", intersect(comm_x, query.comm), "union is ", union(comm_x, query.comm)))
+      comm_x <- unlist(comm[which(comm$id==x), "cluster"])
       # Calculate jaccard coefficient
-      coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
-      print(paste("coe ",coe, " length", length(coe)))
+      coe <- NULL
+      if (.normalized) { # Normalize result by community size
+        coe <- sum(2/unlist(comm[which(comm$id %in% intersect(comm_x, query.comm)), "count"])) / length(union(comm_x, query.comm))
+      } else { # Do not normalize 
+        coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+      }
       coe
     })
-    print(paste("lambda ", i, " coeff ", coeff))
+    
     tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), newtitle)
-    print(paste("tmpres dim ", dim(tmpres)))
     colnames(tmpres) <- c("label", "rank", "coeff", "title")
     g.df <- rbind(g.df, tmpres)
   }
