@@ -31,8 +31,8 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
   for (i in interval) { # Generate AP based on step
     lbl <- paste(expression(lambda),"=", i) # Get colname
     score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
-    neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
-    newtitle <- fbppr.df[order(neworder), "title"]
+    neworder <- order(score, decreasing = TRUE) # New rank
+    newtitle <- fbppr.df[neworder, "title"]
     ap <- fbppr.ap(fbppr.df[neworder, "cluster"], rep(query.node$cluster, nrow(fbppr.df))) # Get AP by that order
     tmpres <- data.frame(rep(lbl, length(ap)), 1:length(ap), ap, newtitle)
     colnames(tmpres) <- c("label", "rank", "AP", "title")
@@ -41,4 +41,36 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
   g.df
 }
 
-# Calculate average precision
+# Calculate jaccard coefficient
+fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c()) {
+  # Set step
+  interval <- seq(from = 0, to = 1, by = .by)
+  if(length(.interval) != 0) {
+    interval <- .interval
+  }
+  g.df <- NULL
+  # get communities of query node
+  query.comm <- unlist(comm[which(comm$id == query.node$id), "cluster"])
+  for(i in interval) {
+    lbl <- paste(expression(lambda),"",i) # get colname
+    score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
+    neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
+    newtitle <- fbppr.df[order(neworder), "title"]
+    print(paste("l59 ", fbppr.df[neworder, "id"]))
+    coeff <- lapply(fbppr.df[neworder, "id"], function(x){
+      # get communities of x
+      comm_x <- unlist(comm[which(comm$id==x),"cluster"])
+      print(paste("node",x," intersect is ", intersect(comm_x, query.comm), "union is ", union(comm_x, query.comm)))
+      # Calculate jaccard coefficient
+      coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+      print(paste("coe ",coe, " length", length(coe)))
+      coe
+    })
+    print(paste("lambda ", i, " coeff ", coeff))
+    tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), newtitle)
+    print(paste("tmpres dim ", dim(tmpres)))
+    colnames(tmpres) <- c("label", "rank", "coeff", "title")
+    g.df <- rbind(g.df, tmpres)
+  }
+  g.df
+}
