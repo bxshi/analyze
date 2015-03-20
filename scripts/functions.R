@@ -1,5 +1,5 @@
 # Calculate average precision
-fbppr.ap <- function(pred, actual) {
+fbppr.ap <- function(pred, actual, .comm) {
   len <- min(length(pred), length(actual))
   p <- rep(0.0, len)
   ap <- rep(0.0, len)
