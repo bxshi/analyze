@@ -13,6 +13,10 @@
 
 import sys
 
+if len(sys.argv) != 3:
+    print("./community_to_list.py community_file output_path")
+    exit(233)
+
 fout = open(sys.argv[2], "w+")
 fout.write("id, cluster, count\n")
 
