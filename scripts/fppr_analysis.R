@@ -37,7 +37,7 @@ single_comm_analysis <- function(fbppr_file, community_file, lambda) {
 # Recall is defined as how many communities that query point belongs to have been discovered 
 # fbppr_file filepath of fbppr result
 # community_file filepath of community file, [id, ids that in the same cluster] per line
-multi_comm_analysis <- function(fbppr_file, community_file, lambda, draw=TRUE, normalize = FALSE) {
+multi_comm_analysis <- function(fbppr_file, community_file, lambda, draw=TRUE, normalize = FALSE, ap = FALSE) {
   
   df <- read.csv(fbppr_file)
   comm <- read.csv(community_file)
@@ -53,7 +53,7 @@ multi_comm_analysis <- function(fbppr_file, community_file, lambda, draw=TRUE, n
     query.node <- df.current[which(df.current$fppr_rank == 0),] # Extract query point
     df.current <- df.current[which(df.current$fppr_rank != 0), ] # Remove query point from data frame
     # Calculate Jaccard coefficient for each rank
-    df.current <- cbind(fbppr.coeff(df.current, query.node, comm, .interval = lambda, .normalized = normalize), query_id=query.node$id)
+    df.current <- cbind(fbppr.coeff(df.current, query.node, comm, .interval = lambda, .normalized = normalize, .ap = ap), query_id=query.node$id)
   })
   
   df <- ldply(df.splitted)
