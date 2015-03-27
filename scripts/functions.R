@@ -1,20 +1,18 @@
 # Calculate average precision
 fbppr.ap <- function(pred, actual) {
   len <- min(length(pred), length(actual))
-  p <- rep(0.0, len)
+  sum_score <- 0
   ap <- rep(0.0, len)
   cnt <- 0
   for(i in 1:len) {
     if (pred[i] == actual[i]) {
       cnt <- cnt + 1
-      p[i] <- cnt / i # precision = #Rel / N
-    } else {
-      p[i] <- 0
+      sum_score <- sum_score + cnt / i # precision = #Rel / N
     }
     if (cnt == 0) {
       ap[i] == 0
     } else {
-      ap[i] <- sum(p[1:i]) / cnt
+      ap[i] <- sum_score / cnt
     }
   }
   return(as.double(ap))
@@ -22,7 +20,6 @@ fbppr.ap <- function(pred, actual) {
 
 fbppr.multiap <- function(pred, actual, .comm) {
   len <- min(length(pred), length(actual))
-  p <- rep(0.0, len)
   ap <- rep(0.0, len)
   cnt <- 0
   sum_score <- 0
@@ -33,14 +30,11 @@ fbppr.multiap <- function(pred, actual, .comm) {
     if (jaccard.score > 0) {
       sum_score <- sum_score + jaccard.score
       cnt <- cnt + 1
-      p[i] <- sum_score / i
-    } else {
-      p[i] <- 0
     }
     if (cnt == 0) {
       ap[i] <- 0
     } else {
-      ap[i] <- sum(p[1:i]) / cnt
+      ap[i] <- sum_score / cnt
     }
   }
   return(as.double(ap))
@@ -67,8 +61,17 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
   g.df
 }
 
+simrank.coeff <- function(simrank.df, lbl, query.node, comm) {
+  g.df <- NULL
+  query.comm <- unlist(comm[which(comm$id == query.node$id), "cluster"])
+  coeff <- fbppr.multiap(simrank.df[order(simrank.df$rank, decreasing = FALSE), "id"], rep(query.node$id, nrow(simrank.df)), comm) # Get AP by that order
+  tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), "")
+  colnames(tmpres) <- c("label", "rank", "coeff", "title")
+  g.df <- rbind(g.df, tmpres)
+}
+
 # Calculate jaccard coefficient
-fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .normalized=FALSE, .ap=FALSE) {
+fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .normalized=FALSE, .ap=FALSE, .multiply=FALSE) {
   # Set step
   interval <- seq(from = 0, to = 1, by = .by)
   if(length(.interval) != 0) {
@@ -77,33 +80,70 @@ fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .norma
   g.df <- NULL
   # get communities of query node
   query.comm <- unlist(comm[which(comm$id == query.node$id), "cluster"])
-  for(i in interval) {
-    lbl <- paste(expression(lambda),"",i) # get colname
-    score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
-    neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
-    newtitle <- fbppr.df[order(neworder), "title"]
-    
-    # Calculate jaccard coefficient
-    coeff <- NULL
-    if (.ap == FALSE) {
-      coeff <- lapply(fbppr.df[neworder, "id"], function(x){
-        # get communities of x
-        comm_x <- unlist(comm[which(comm$id==x), "cluster"])
-        # Calculate jaccard coefficient
-        coe <- NULL
-        if (.normalized) { # Normalize result by community size
-          coe <- sum(2/unlist(comm[which(comm$id %in% intersect(comm_x, query.comm)), "count"])) / length(union(comm_x, query.comm))
-        } else { # Do not normalize 
-          coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
-        }
-        coe
-      })
-    } else {
-      coeff <- fbppr.multiap(fbppr.df[neworder, "id"], rep(query.node$id, nrow(fbppr.df)), comm) # Get AP by that order
+  if (.multiply) {
+    for(lbl in c("ppr","multiply")) {
+      score <- NULL
+      if(lbl == "multiply") {
+        score <- fbppr.df$fppr_score * fbppr.df$bppr_score
+      } else {
+        score <- fbppr.df$fppr_score
+      }
+      neworder <- order(score, decreasing = TRUE)
+      newtitle <- fbppr.df[order(neworder), "title"]
+      
+      coeff <- NULL
+      if (.ap == FALSE) {
+        coeff <- lapply(fbppr.df[neworder, "id"], function(x){
+          # get communities of x
+          comm_x <- unlist(comm[which(comm$id==x), "cluster"])
+          # Calculate jaccard coefficient
+          coe <- NULL
+          if (.normalized) { # Normalize result by community size
+            coe <- sum(2/unlist(comm[which(comm$id %in% intersect(comm_x, query.comm)), "count"])) / length(union(comm_x, query.comm))
+          } else { # Do not normalize 
+            coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+          }
+          coe
+        })
+      } else {
+        coeff <- fbppr.multiap(fbppr.df[neworder, "id"], rep(query.node$id, nrow(fbppr.df)), comm) # Get AP by that order
+      }
+      
+      tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), newtitle)
+      colnames(tmpres) <- c("label", "rank", "coeff", "title")
+      g.df <- rbind(g.df, tmpres)
+      
     }
-    tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), newtitle)
-    colnames(tmpres) <- c("label", "rank", "coeff", "title")
-    g.df <- rbind(g.df, tmpres)
+  }else {
+    for(i in interval) {
+      lbl <- paste(expression(lambda),"",i) # get colname
+      score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
+      neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
+      newtitle <- fbppr.df[order(neworder), "title"]
+      
+      # Calculate jaccard coefficient
+      coeff <- NULL
+      if (.ap == FALSE) {
+        coeff <- lapply(fbppr.df[neworder, "id"], function(x){
+          # get communities of x
+          comm_x <- unlist(comm[which(comm$id==x), "cluster"])
+          # Calculate jaccard coefficient
+          coe <- NULL
+          if (.normalized) { # Normalize result by community size
+            coe <- sum(2/unlist(comm[which(comm$id %in% intersect(comm_x, query.comm)), "count"])) / length(union(comm_x, query.comm))
+          } else { # Do not normalize 
+            coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+          }
+          coe
+        })
+      } else {
+        coeff <- fbppr.multiap(fbppr.df[neworder, "id"], rep(query.node$id, nrow(fbppr.df)), comm) # Get AP by that order
+      }
+      
+      tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), newtitle)
+      colnames(tmpres) <- c("label", "rank", "coeff", "title")
+      g.df <- rbind(g.df, tmpres)
+    }
   }
   g.df
 }
