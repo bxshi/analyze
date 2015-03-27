@@ -61,10 +61,20 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
   g.df
 }
 
-simrank.coeff <- function(simrank.df, lbl, query.node, comm) {
+rank.coeff <- function(rank.df, lbl, query.node, comm, .ap=FALSE) {
   g.df <- NULL
   query.comm <- unlist(comm[which(comm$id == query.node$id), "cluster"])
-  coeff <- fbppr.multiap(simrank.df[order(simrank.df$rank, decreasing = FALSE), "id"], rep(query.node$id, nrow(simrank.df)), comm) # Get AP by that order
+  neworder <- order(rank.df$rank, decreasing = FALSE) # Make sure the order is following the rank
+  if (.ap) { # MAJ
+    coeff <- fbppr.multiap(rank.df[neworder, "id"], rep(query.node$id, nrow(rank.df)), comm) # Get AP by that order
+  } else { # Jaccard
+    coeff <- lapply(rank.df[neworder, "id"], function(x){
+      # get communities of x
+      comm_x <- unlist(comm[which(comm$id==x), "cluster"])
+      # Calculate jaccard coefficient
+      as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+    })
+  }
   tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), "")
   colnames(tmpres) <- c("label", "rank", "coeff", "title")
   g.df <- rbind(g.df, tmpres)
