@@ -74,48 +74,86 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
   * Run FBPPR
   */
   def run(): Unit = {
-    println(math.pow(1-config.alpha,config.c.toDouble))
 
-    val sampledNodes = if(config.queryId == 0l) {
-      val tmp = graph.vertices.innerJoin(graph.outDegrees)((vid, data, outdeg) => outdeg)
-        .innerJoin(graph.inDegrees)((vid, data, indeg) => (data, indeg))
-        .filter(x=> x._2._1 >= 10 && x._2._2 >= 10)
+    if (config.sampleEdge) { // edge based sampling
+      // Get sampling node pairs by edges
+      val sampleNodePairs = graph.triplets.sample(false,
+        if (config.sample > graph.numEdges) 1 else config.sample.toDouble/graph.numEdges, 2l)
+        .map(x => (x.srcId, x.dstId)).collect().toSeq
 
-      println(tmp.count(), config.sample.toDouble,config.sample.toDouble / tmp.count())
+      println("sample edges are " + sampleNodePairs.map(x=>x._1.toString+","+x._2.toString).reduce(_++_))
 
-      tmp.sample(false, if(config.sample.toDouble > tmp.count()) 1 else config.sample.toDouble / tmp.count(), 2l).map(_._1).collect().toSeq
-    } else Seq(config.queryId)
+      sampleNodePairs.foreach(nodePair => {
+        var Initial_node = Array[Long](nodePair._1)
+        val newgraph = Graph(setInitialP(Initial_node), edges)
+        val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, nodePair._1, config.maxIter, config.alpha)
+        val fpprRank = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, nodePair._2)
 
-    println("sample nodes are " + sampledNodes)
+        newgraph.unpersist(blocking = false)
 
-    sampledNodes.foreach(queryId => {
-      var Initial_node = Array[Long](queryId)
-      val newgraph = Graph(setInitialP(Initial_node), edges)
-      val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, config.maxIter, config.alpha)
-      val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap, config.topK)
-
-      fpprRankTopK.foreach(elem =>{
-        if (!finalResult.contains((elem._1, queryId))) {
-          finalResult((elem._1, queryId)) = new mutable.HashMap[String, String]()
+        if (!finalResult.contains(nodePair)) {
+          finalResult(nodePair) = new mutable.HashMap[String, String]()
         }
+        finalResult(nodePair)("src_title") = titleMap.getOrElse(nodePair._1,"")
+        finalResult(nodePair)("dst_title") = fpprRank.head._2
+        finalResult(nodePair)("query_id") = nodePair._1.toString
+        finalResult(nodePair)("fppr_score")=fpprRank.head._4.toString
+        finalResult(nodePair)("fppr_rank")=fpprRank.head._3.toString
+
+        Initial_node = Array[Long](nodePair._2)
+        val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
+        val resGraph2 = PersonalizedPageRank.runWithInitialScore(invgraph, nodePair._2, config.maxIter, config.alpha)
+        val ans = DataExtractor.extractNodeFromPageRank(resGraph2, titleMap, nodePair._1)
+        finalResult(nodePair)("bppr_score") = ans.head._4.toString
+        finalResult(nodePair)("bppr_rank") = ans.head._3.toString
+        println(finalResult(nodePair))
+        invgraph.unpersist(blocking = false)
+        resGraph.unpersist(blocking = false)
+
+      })
+
+    } else { // node based sampling
+      val sampledNodes = if(config.queryId == 0l) {
+        val tmp = graph.vertices.innerJoin(graph.outDegrees)((vid, data, outdeg) => outdeg)
+          .innerJoin(graph.inDegrees)((vid, data, indeg) => (data, indeg))
+          .filter(x=> x._2._1 >= 10 && x._2._2 >= 10)
+
+        println(tmp.count(), config.sample.toDouble,config.sample.toDouble / tmp.count())
+
+        tmp.sample(false, if(config.sample.toDouble > tmp.count()) 1 else config.sample.toDouble / tmp.count(), 2l).map(_._1).collect().toSeq
+      } else Seq(config.queryId)
+
+      println("sample nodes are " + sampledNodes)
+
+      sampledNodes.foreach(queryId => {
+        var Initial_node = Array[Long](queryId)
+        val newgraph = Graph(setInitialP(Initial_node), edges)
+        val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, config.maxIter, config.alpha)
+        val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap, config.topK)
+
+        fpprRankTopK.foreach(elem =>{
+          if (!finalResult.contains((elem._1, queryId))) {
+            finalResult((elem._1, queryId)) = new mutable.HashMap[String, String]()
+          }
           finalResult((elem._1, queryId))("title") = elem._2.toString
           finalResult((elem._1, queryId))("query_id") = queryId.toString
           finalResult((elem._1, queryId))("fppr_score")=elem._4.toString
           finalResult((elem._1, queryId))("fppr_rank")=elem._3.toString
-      })
+        })
 
-      fpprRankTopK.foreach(elem => {
-        Initial_node = Array[Long](elem._1)
-        val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
-        val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
-        val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
-        finalResult((elem._1, queryId))("bppr_score") = ans.head._4.toString
-        finalResult((elem._1, queryId))("bppr_rank") = ans.head._3.toString
-        println(finalResult((elem._1, queryId)))
-        invgraph.unpersist(blocking = false)
-        resGraph.unpersist(blocking = false)
+        fpprRankTopK.foreach(elem => {
+          Initial_node = Array[Long](elem._1)
+          val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
+          val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
+          val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
+          finalResult((elem._1, queryId))("bppr_score") = ans.head._4.toString
+          finalResult((elem._1, queryId))("bppr_rank") = ans.head._3.toString
+          println(finalResult((elem._1, queryId)))
+          invgraph.unpersist(blocking = false)
+          resGraph.unpersist(blocking = false)
+        })
       })
-    })
+    }
 
     writeResult(config.outPath, finalResult)
     println("Finished!")
