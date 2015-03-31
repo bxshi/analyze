@@ -87,7 +87,7 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
         var Initial_node = Array[Long](nodePair._1)
         val newgraph = Graph(setInitialP(Initial_node), edges)
         val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, nodePair._1, config.maxIter, config.alpha)
-        val fpprRank = DataExtractor.extractNodeFromPageRank(newgraph, titleMap, nodePair._2)
+        val fpprRank = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, nodePair._2)
 
         newgraph.unpersist(blocking = false)
 
