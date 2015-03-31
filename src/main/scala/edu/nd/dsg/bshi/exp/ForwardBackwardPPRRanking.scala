@@ -79,7 +79,7 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
       // Get sampling node pairs by edges
       val sampleNodePairs = graph.triplets.sample(false,
         if (config.sample > graph.numEdges) 1 else config.sample.toDouble/graph.numEdges, 2l)
-        .map(x => (x.srcId, x.dstId)).collect()
+        .map(x => (x.srcId, x.dstId)).collect().toSeq
 
       println("sample edges are " + sampleNodePairs.map(x=>x._1.toString+","+x._2.toString).reduce(_++_))
 
