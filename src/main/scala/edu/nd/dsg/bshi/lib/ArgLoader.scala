@@ -34,6 +34,7 @@ trait ArgLoader[T] {
                     outPath: String = "", // Output path, should be a local location
                     sample: Int = 5, // Number of sample nodes
                     directed: Boolean = true, // Whether this is a directed graph or not
+                    sampleEdge: Boolean = false, // Whether sample edges or not
                    // Misc
                     nCores: Int = 4, // Number of cores for Spark
                     file: String = "", // log4j properties
@@ -78,6 +79,10 @@ trait ArgLoader[T] {
     opt[Boolean]('d', "directed") action {
       (x,c) => c.copy(directed = x)
     } text "directed graph or not, default is directed graph"
+
+    opt[Boolean]("sampleEdge") action {
+      (x,c) => c.copy(sampleEdge = x)
+    } text "Whether sample edges or not, default is false"
 
     opt[VertexId]('q', "query") action {
       (x,c) => c.copy(queryId = x)
