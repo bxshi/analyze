@@ -71,7 +71,7 @@ rank_analysis <- function(file, lbl, community, .ap = FALSE) {
 #' @param normalized THIS SHOULD BE DISCARDED
 #' @param ap do average jaccard or not
 #' @param multiple DISCARD this
-multi_comm_analysis <- function(fbppr_file, simrank_file, salsa_file, 
+multi_comm_analysis <- function(fbppr_file, simrank_file, salsa_files, 
                                 community_file, lambda=c(0,1), draw=TRUE, 
                                 errbar = FALSE, normalize = FALSE, 
                                 ap = FALSE, multiply = FALSE) {
@@ -96,10 +96,12 @@ multi_comm_analysis <- function(fbppr_file, simrank_file, salsa_file,
   df <- ldply(df.splitted)
   df.summary <- summarySE(df, measurevar = "coeff", groupvars = c("label", "rank"))
   if(simrank_file != ""){
-    df.summary <- rbind(df.summary,rank_analysis(file = simrank_file, "simrank", community = comm, .ap = ap))
+    df.summary <- rbind(df.summary,rank_analysis(file = simrank_file, "SimRank", community = comm, .ap = ap))
   }
-  if(salsa_file != "") {
-    df.summary <- rbind(df.summary, rank_analysis(file = salsa_file, "salsa", community = comm, .ap = ap))
+  if(dim(salsa_files)[1] != 0) {
+    for(i in 1 : dim(salsa_files)[1]){
+      df.summary <- rbind(df.summary, rank_analysis(file = as.character(salsa_files[i,"filename"]), as.character(salsa_files[i,"title"]), community = comm, .ap = ap))
+    }
   }
   
   g <- ggplot(df.summary, aes(x=rank, y=coeff, group=label, color=label, linetype=label)) + 
