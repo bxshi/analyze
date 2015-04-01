@@ -86,7 +86,11 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
       sampleNodePairs.foreach(nodePair => {
         var Initial_node = Array[Long](nodePair._1)
         val newgraph = Graph(setInitialP(Initial_node), edges)
-        val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, nodePair._1, config.maxIter, config.alpha)
+        val resGraph = if(config.maxIter > 0) {
+          PersonalizedPageRank.runWithInitialScore(newgraph, nodePair._1, config.maxIter, config.alpha)
+        } else {
+          PersonalizedPageRank.runWithInitialScoreUntilConvergence(newgraph, nodePair._1, tol = 0.00000001, config.alpha)
+        }
         val fpprRank = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, nodePair._2)
 
         newgraph.unpersist(blocking = false)
@@ -102,7 +106,11 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
 
         Initial_node = Array[Long](nodePair._2)
         val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
-        val resGraph2 = PersonalizedPageRank.runWithInitialScore(invgraph, nodePair._2, config.maxIter, config.alpha)
+        val resGraph2 = if(config.maxIter > 0) {
+          PersonalizedPageRank.runWithInitialScore(invgraph, nodePair._2, config.maxIter, config.alpha)
+        } else {
+          PersonalizedPageRank.runWithInitialScoreUntilConvergence(invgraph, nodePair._2, tol = 00000001, config.alpha)
+        }
         val ans = DataExtractor.extractNodeFromPageRank(resGraph2, titleMap, nodePair._1)
         finalResult(nodePair)("bppr_score") = ans.head._4.toString
         finalResult(nodePair)("bppr_rank") = ans.head._3.toString
@@ -128,7 +136,11 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
       sampledNodes.foreach(queryId => {
         var Initial_node = Array[Long](queryId)
         val newgraph = Graph(setInitialP(Initial_node), edges)
-        val resGraph = PersonalizedPageRank.runWithInitialScore(newgraph, queryId, config.maxIter, config.alpha)
+        val resGraph = if (config.maxIter > 0) {
+          PersonalizedPageRank.runWithInitialScore(newgraph, queryId, config.maxIter, config.alpha)
+        } else {
+          PersonalizedPageRank.runWithInitialScoreUntilConvergence(newgraph, queryId, tol=0.00000001, config.alpha)
+        }
         val fpprRankTopK = DataExtractor.extractTopKFromPageRank(resGraph,titleMap, config.topK)
 
         fpprRankTopK.foreach(elem =>{
@@ -144,7 +156,11 @@ object ForwardBackwardPPRRanking extends ExperimentTemplate[Double] with OutputW
         fpprRankTopK.foreach(elem => {
           Initial_node = Array[Long](elem._1)
           val invgraph = Graph(setInitialP(Initial_node), graph.edges.reverse)
-          val resGraph = PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
+          val resGraph = if(config.maxIter > 0) {
+            PersonalizedPageRank.runWithInitialScore(invgraph, elem._1, config.maxIter, config.alpha)
+          } else {
+            PersonalizedPageRank.runWithInitialScoreUntilConvergence(invgraph, elem._1, tol=0.00000001, config.alpha)
+          }
           val ans = DataExtractor.extractNodeFromPageRank(resGraph, titleMap, queryId)
           finalResult((elem._1, queryId))("bppr_score") = ans.head._4.toString
           finalResult((elem._1, queryId))("bppr_rank") = ans.head._3.toString

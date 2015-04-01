@@ -50,7 +50,7 @@ trait ArgLoader[T] {
 
     opt[Int]('i', "iter") action {
       (x,c) => c.copy(maxIter = x)
-    } text "Max iteration number of PR & PPR default 15"
+    } text "Max iteration number of PR & PPR default 15, negative number means run until convergence"
 
     opt[Int]('k', "topk") action {
       (x,c) => c.copy(topK = x)
