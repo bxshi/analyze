@@ -62,7 +62,7 @@ load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, 
                                      "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
   salsa.false <- read.csv(salsa_false, header=FALSE, sep=" ",
                           col.names=c("query_id", "id", "query_auth_score", "query_auth_rank","query_hub_score",
-                                      "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
+                                      "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))  
   salsa.true$label <- "T"
   salsa.false$label <- "F"
   
@@ -76,11 +76,12 @@ load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, 
 
 #' Generate formula based on models
 generate_formulas <- function() {
-  feature_list <- list(FPPR=c("fppr_score", "fppr_rank"),
+  feature_list <- list(FPPR=c("fppr_score"),
                     FBPPR=c("fppr_score", "fppr_rank", "bppr_score", "bppr_rank"),
                     SIMRANK=c("sim_score"),
-                    PSALSA=c("query_auth_score", "query_auth_rank","query_hub_score",
-                                "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
+                    PSALSA=c("query_auth_score", "id_auth_score"))
+#                     PSALSA=c("query_auth_score", "query_auth_rank","query_hub_score",
+#                                 "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
   formulas <- NULL
   # Four models in total, FPPR, FBPPR, SIMRANK, and P-SALSA
   for(i in 1:4) { # Number of models
@@ -97,6 +98,11 @@ generate_formulas <- function() {
 
 #' Return result of logistic regression
 logistic <- function(df) {
+  
+  op <- options("warn")
+  on.exit(options(op))
+  options(warn=1)
+  
   # Convert label to categorical value
   df$label <- as.factor(df$label)
   # Get all possible formulas
@@ -155,9 +161,9 @@ roc_data <- function(df) {
 plot_roc <- function(roc_res, filename = "./roc") {
   roc_res <- roc_res$roc
   
-  plot_roc.draw <- function(roc_df) {
+  plot_roc.draw <- function(roc_df, legend.leftpadding=0.6) {
     g <- ggplot(roc_df, aes(x=fp, y=tp, color=model,
-                            group=model, linetype=model)) +
+                            linetype=model)) +
       geom_line() + geom_abline(slope=1, intercept=0) +
       scale_x_continuous(expand=c(0,0)) +
       scale_y_continuous(expand=c(0,0)) +
@@ -165,13 +171,13 @@ plot_roc <- function(roc_res, filename = "./roc") {
       xlab("False Positive Rate") +
       theme_classic() +
       theme(panel.background = element_rect(colour = "black", size=1),
-            legend.justification=c(0,0), legend.position=c(0.6,0))
+            legend.justification=c(0,0), legend.position=c(legend.leftpadding,0))
   }
   
-  g1 <- plot_roc.draw(roc_res[roc_res$nmodel == 1, ])
-  g2 <- plot_roc.draw(roc_res[roc_res$nmodel == 2, ])
-  g3 <- plot_roc.draw(roc_res[roc_res$nmodel == 3, ])
-  g4 <- plot_roc.draw(roc_res[roc_res$nmodel == 4, ])
+  g1 <- plot_roc.draw(roc_res[roc_res$nmodel == 1, ], 0.6)
+  g2 <- plot_roc.draw(roc_res[roc_res$nmodel == 2, ], 0.5)
+  g3 <- plot_roc.draw(roc_res[roc_res$nmodel == 3, ], 0.4)
+  g4 <- plot_roc.draw(roc_res[roc_res$nmodel == 4, ], 0.2)
   
   ggsave(g1, filename = paste(filename, "_nmodel_1.eps", sep = ""), width = 5, height = 5)
   ggsave(g2, filename = paste(filename, "_nmodel_2.eps", sep = ""), width = 5, height = 5)
@@ -196,7 +202,7 @@ plot_auc <- function(roc_res, filename = "./auc") {
        xlab("Models") +
        scale_colour_brewer(palette="Set1") +
        theme_classic() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1),
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4),
             panel.background = element_rect(colour = "black", size=1),
             legend.position = "none")
   }
