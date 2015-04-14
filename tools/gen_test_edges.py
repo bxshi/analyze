@@ -7,7 +7,6 @@ import random
 
 if len(sys.argv) != 4:
     print("Usage: ./gen_test_edges.py edgelist_file num_samples output_file_prefix")
-    print("Example: ./gen_test_edges.py 1000 edgelist.edgelist result")
     exit(0)
 
 edgelist_file = sys.argv[1]
