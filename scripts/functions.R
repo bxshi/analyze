@@ -30,6 +30,8 @@ fbppr.multiap <- function(pred, actual, .comm) {
     if (jaccard.score > 0) {
       sum_score <- sum_score + jaccard.score
       cnt <- cnt + 1
+    } else {
+      print(pred, actual)
     }
     if (cnt == 0) {
       ap[i] <- 0
@@ -59,6 +61,22 @@ fbppr.combine <- function(fbppr.df, query.node, .by=1, .interval=c()) {
     g.df <- rbind(g.df, tmpres)
   }
   g.df
+}
+
+fill_up_data <- function(dat, titlemap) {
+  if (!"title" %in% colnames(dat)) {
+    dat <- merge(dat, titlemap)
+    colnames(dat) <- c(colnames(dat)[1 : length(colnames(dat)) -1], "title")
+  }
+  if (!"fppr_rank" %in% colnames(dat)) {
+    dat <- cbind(dat[order(-dat$fppr_score),], 0:dim(dat)[1]-1)
+    colnames(dat) <- c(colnames(dat)[1 : length(colnames(dat)) -1], "fppr_rank")
+  }
+  if (!"bppr_rank" %in% colnames(dat)) {
+    dat <- cbind(dat[order(-dat$bppr_score),], 0:dim(dat)[1]-1)
+    colnames(dat) <- c(colnames(dat)[1 : length(colnames(dat)) -1], "bppr_rank")
+  }
+  return(dat)
 }
 
 rank.coeff <- function(rank.df, lbl, query.node, comm, .ap=FALSE) {
@@ -129,7 +147,12 @@ fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .norma
       lbl <- paste(expression(lambda),"",i) # get colname
       score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
       neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
-      newtitle <- fbppr.df[order(neworder), "title"]
+      newtitle <- NULL
+      if ("title" %in% colnames(fbppr.df)) {
+        newtitle <- fbppr.df[order(neworder), "title"]  
+      } else {
+        newtitle <- rep("", dim(fbppr.df)[1])
+      }
       
       # Calculate jaccard coefficient
       coeff <- NULL
@@ -143,6 +166,10 @@ fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .norma
             coe <- sum(2/unlist(comm[which(comm$id %in% intersect(comm_x, query.comm)), "count"])) / length(union(comm_x, query.comm))
           } else { # Do not normalize 
             coe <- as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
+          }
+          if (coe == 0) {
+            print(query.node$id)
+            print(x)
           }
           coe
         })

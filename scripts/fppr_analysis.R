@@ -72,37 +72,59 @@ rank_analysis <- function(file, lbl, community, .ap = FALSE) {
 #' @param ap do average jaccard or not
 #' @param multiple DISCARD this
 multi_comm_analysis <- function(fbppr_file, simrank_file, salsa_files, 
-                                community_file, lambda=c(0,1), draw=TRUE, 
+                                community_file, titlemap_file, lambda=c(0,1), draw=TRUE, 
                                 errbar = FALSE, normalize = FALSE, 
-                                ap = FALSE, multiply = FALSE) {
+                                ap = FALSE, multiply = FALSE, topK=20) {
   
-  df <- read.csv(fbppr_file)
+  df <- NULL
+  if(typeof(fbppr_file) == "character"){
+    df <- read.csv(fbppr_file)   
+  } else {
+    df <- fbppr_file
+  }
+  
   comm <- read.csv(community_file)
+  
+  titlemap <- NULL
+  if (typeof(titlemap_file) == "character") {
+    titlemap <- read.csv(titlemap_file, header=FALSE)
+  } else {
+    titlemap <- titlemap_file
+  }
+  colnames(titlemap) <- c("id", "title")
+  
+  # Fill up missing columns
+  
+  fill_up_data(df, titlemap)
+  
+  df <- df[which(df$fppr_rank < topK),]
   
   # Split into groups based on queryId
   df.splitted <- split(df, f = df$query_id) # A list of splitted data frame
   
   # This should not happen, check generation codes
-  df.splitted <- df.splitted[unlist(lapply(df.splitted,function(x){dim(x)[1] == 20}))]
+  #df.splitted <- df.splitted[unlist(lapply(df.splitted,function(x){dim(x)[1] == 20}))]
   
   df.splitted <- lapply(df.splitted, function(df.current){
     # Preprocessing
-    query.node <- df.current[which(df.current$fppr_rank == 0),] # Extract query point
-    df.current <- df.current[which(df.current$fppr_rank != 0), ] # Remove query point from data frame
+    query.node <- df.current[which.max(df.current$fppr_score),] # Extract query point
+    df.current <- df.current[which(df.current$id != query.node$id), ] # Remove query point from data frame
     # Calculate Jaccard coefficient for each rank
     df.current <- cbind(fbppr.coeff(df.current, query.node, comm, .interval = lambda, .normalized = normalize, .ap = ap, .multiply = multiply), query_id=query.node$id)
   })
   
   df <- ldply(df.splitted)
   df.summary <- summarySE(df, measurevar = "coeff", groupvars = c("label", "rank"))
-  if(simrank_file != ""){
-    df.summary <- rbind(df.summary,rank_analysis(file = simrank_file, "SimRank", community = comm, .ap = ap))
-  }
-  if(dim(salsa_files)[1] != 0) {
-    for(i in 1 : dim(salsa_files)[1]){
-      df.summary <- rbind(df.summary, rank_analysis(file = as.character(salsa_files[i,"filename"]), as.character(salsa_files[i,"title"]), community = comm, .ap = ap))
-    }
-  }
+#   if(simrank_file != NULL && simrank_file != ""){
+#     df.summary <- rbind(df.summary,rank_analysis(file = simrank_file, "SimRank", community = comm, .ap = ap))
+#   }
+#   if(salsa_file != NULL && dim(salsa_files)[1] != 0) {
+#     for(i in 1 : dim(salsa_files)[1]){
+#       df.summary <- rbind(df.summary, rank_analysis(file = as.character(salsa_files[i,"filename"]), as.character(salsa_files[i,"title"]), community = comm, .ap = ap))
+#     }
+#   }
+
+  View(df)
   
   g <- ggplot(df.summary, aes(x=rank, y=coeff, group=label, color=label, linetype=label)) + 
     geom_point(position=position_dodge(0.1)) + 
