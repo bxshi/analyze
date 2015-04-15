@@ -1,5 +1,6 @@
 library(pROC)
 library(ggplot2)
+library(LiblineaR)
 
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
@@ -87,13 +88,83 @@ generate_formulas <- function() {
   for(i in 1:4) { # Number of models
     selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA"), i)
     for(j in 1:dim(selected_models)[2]) { # 4 choose i results
-      selected_features <- unlist(feature_list[selected_models[,j]]) # We do not deduplicate here so each model is unique
+      selected_features <- unique(unlist(feature_list[selected_models[,j]])) # We do not deduplicate here so each model is unique
       formulas <- rbind(formulas, data.frame(formula = paste("label", paste(selected_features, collapse= "+"), sep= "~"),
                                              model = paste(selected_models[,j], collapse="+")))
     }
   }
   formulas$formula <- as.character(formulas$formula)
   return(formulas) # 15 combinations
+}
+
+generate_columns <- function() {
+  feature_list <- list(FPPR=c("fppr_score"),
+                       FBPPR=c("fppr_score", "fppr_rank", "bppr_score", "bppr_rank"),
+                       SIMRANK=c("sim_score"),
+                       PSALSA=c("query_auth_score", "id_auth_score"))
+  #                     PSALSA=c("query_auth_score", "query_auth_rank","query_hub_score",
+  #                                 "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
+  formulas <- c()
+  # Four models in total, FPPR, FBPPR, SIMRANK, and P-SALSA
+  for(i in 1:4) { # Number of models
+    selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA"), i)
+    for(j in 1:dim(selected_models)[2]) { # 4 choose i results
+      selected_features <- unique(unlist(feature_list[selected_models[,j]])) # We do not deduplicate here so each model is unique
+      tmplist <- list(model = paste(selected_models[,j], collapse="+"),
+                      features = c(selected_features))
+      formulas <- c(formulas, as.list(tmplist))
+    }
+  }
+  return(formulas) # 15 combinations
+}
+
+l2logistic <- function(df) {
+  op <- options("warn")
+  on.exit(options(op))
+  options(warn=1)
+  
+  # Convert label to categorical value
+  df$label <- as.factor(df$label)
+  
+  formulas <- generate_columns()
+  
+  # Generate 5 fold datasets
+  set.seed(233)
+  ind <- sample(1:5, nrow(df), replace = TRUE) 
+  
+  # Do 5 fold on each formula
+  result <- NULL
+  for(index in 1:(length(formulas)/2)) {
+    selected_features <- unlist(formulas[index * 2])
+    model <- formulas[2 * index - 1]$model
+    print(paste("model is ",model,"index is",index))
+    tmp_result <- NULL
+    for(i in 1:5) { # 5 fold
+      # Get training and testing datasets
+      dat.train <- df[which(ind != i),]
+      dat.test <- df[which(ind == i),]
+      
+      # Convert data frame into data matrix
+      target.train <- dat.train[, "label"]
+      target.test <- dat.test[, "label"]
+      dat.train <- as.matrix(dat.train[, selected_features])
+      dat.test <- as.matrix(dat.test[, selected_features])
+      
+      # Train using L2-regularized logistic regression
+      logit <- LiblineaR(dat.train, target.train)
+      
+      # Train model
+      pred <- predict(logit, dat.test, proba = TRUE)$probabilities[,2]
+      dat.test <- df[which(ind == i),]
+      dat.test$pred <- pred
+      tmp_result <- rbind(tmp_result, dat.test) # Prediction result
+    }
+    tmp_result$formula <- paste("label", paste(selected_features, collapse= "+"), sep= "~")
+    tmp_result$model <- model
+    print(unique(tmp_result$model))
+    result <- rbind(result, tmp_result)
+  }
+  return(result)
 }
 
 #' Return result of logistic regression
