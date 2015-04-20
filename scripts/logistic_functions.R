@@ -2,42 +2,6 @@ library(pROC)
 library(ggplot2)
 library(LiblineaR)
 
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  
-  if (numPlots==1) {
-    print(plots[[1]])
-    
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
-
 load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, salsa_false) {
   fbppr.true <- read.csv(fbppr_true, header=FALSE, sep=" ",
                          col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))
@@ -151,10 +115,10 @@ l2logistic <- function(df) {
       dat.test <- as.matrix(dat.test[, selected_features])
       
       # Train using L2-regularized logistic regression
-      logit <- LiblineaR(dat.train, target.train)
+      logit <- LiblineaR(dat.train, target.train, type = 1)
       
       # Train model
-      pred <- predict(logit, dat.test, proba = TRUE)$probabilities[,2]
+      pred <- predict(logit, dat.test, proba = TRUE, decisionValues=TRUE)$decisionValues[,1]
       dat.test <- df[which(ind == i),]
       dat.test$pred <- pred
       tmp_result <- rbind(tmp_result, dat.test) # Prediction result
@@ -216,8 +180,10 @@ roc_data <- function(df) {
   res.auc <- NULL
   res.roc <- NULL
   for(model in unique(df$model)) { # Generate ROC data for each formula
-    roc_result <- roc(label ~ pred, data = df[df$model == model,])
-    res.auc <- rbind(res.auc, data.frame(model = model, auc=roc_result$auc,
+    roc_result <- roc(label ~ pred, data = df[df$model == model,], auc=TRUE, ci=TRUE)
+    res.auc <- rbind(res.auc, data.frame(model = model, auc = roc_result$auc,
+                                         ci = abs(roc_result$ci[1] - roc_result$ci[2]),
+                                         se = abs(roc_result$ci[1] - roc_result$ci[2]) / 1.96,
                                          nmodel = get_model_num(model),
                                          id = 1:roc_result$auc))
     res.roc <- rbind(res.roc, data.frame(model = model, tp = roc_result$sensitivities,
@@ -242,7 +208,8 @@ plot_roc <- function(roc_res, filename = "./roc") {
       xlab("False Positive Rate") +
       theme_classic() +
       theme(panel.background = element_rect(colour = "black", size=1),
-            legend.justification=c(0,0), legend.position=c(legend.leftpadding,0))
+            legend.justification=c(0,0), legend.position=c(legend.leftpadding,0),
+            legend.title=element_blank())
   }
   
   g1 <- plot_roc.draw(roc_res[roc_res$nmodel == 1, ], 0.6)
@@ -267,15 +234,18 @@ plot_auc <- function(roc_res, filename = "./auc") {
     auc_df$nmodel <- as.factor(auc_df$nmodel)
     g <- ggplot(auc_df, aes(x=x, y=auc, fill=nmodel)) +
       geom_bar(stat="identity") + 
+      geom_errorbar(aes(ymin=auc - ci, ymax=auc + ci), position = "identity", width=.2, size = 0.2) +
+      geom_errorbar(aes(ymin=auc - se, ymax=auc + se), colour = "red", position = "identity", width=.2, size = 0.2) +
       scale_x_discrete(breaks=auc_df$x, labels=auc_df$model) +
-       coord_cartesian(ylim=c(0.5, 1)) +
-       ylab("Area Under ROC") +
-       xlab("Models") +
-       scale_colour_brewer(palette="Set1") +
-       theme_classic() +
+      coord_cartesian(ylim=c(0.5, 1)) +
+      ylab("Area Under ROC") +
+      xlab("Models") +
+      scale_colour_brewer(palette="Set1") +
+      theme_classic() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4),
             panel.background = element_rect(colour = "black", size=1),
-            legend.position = "none")
+            legend.position = "none",
+            legend.title=element_blank())
   }
   
   g <- plot_auc.draw(auc_res)
