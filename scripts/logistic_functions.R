@@ -2,15 +2,22 @@ library(pROC)
 library(ggplot2)
 library(LiblineaR)
 
-load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, salsa_false) {
+cbPalette <- c("#000000", "#ff0000", "#00ff00", "#0000ff", "#ff66ff", "#66ffff", "#ffff66")
+
+load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, salsa_false, aa_true, aa_false) {
   fbppr.true <- read.csv(fbppr_true, header=FALSE, sep=" ",
-                         col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))
+                         col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))[1:4802,]
   fbppr.false <- read.csv(fbppr_false, header=FALSE, sep=" ",
                           col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))
   fbppr.true$label <- "T"
   fbppr.false$label <- "F"
   
   fbppr <- rbind(fbppr.true, fbppr.false)
+  
+  #degs <- read.csv(deg_file, sep=" ", header=F)
+  #colnames(degs) <- c("id","outd","ind")
+  #fbppr$fppr_rank <- fbppr$fppr_rank / (degs[which(degs$id == fbppr$query_id), "outd"] + 1)
+  #fbppr$bppr_rank <- bppr$bppr_rank / (degs[which(degs$id == fbppr$id), "ind"] + 1)
   
   sim.true <- read.csv(sim_true, header=FALSE, sep=" ",
                        col.names=c("query_id", "id", "sim_score"))
@@ -33,24 +40,37 @@ load_data <- function(fbppr_true, fbppr_false, sim_true, sim_false, salsa_true, 
   
   salsa <- rbind(salsa.true, salsa.false)
   
+  aa.true <- read.csv(aa_true, header=F, sep=" ",
+                      col.names=c("query_id","id","aa_score"))
+  aa.false <- read.csv(aa_false, header=F, sep=" ",
+                       col.names=c("query_id", "id", "aa_score"))
+  
+  aa.true$label <- "T"
+  aa.false$label <- "F"
+  aa <- rbind(aa.true, aa.false)
+  
   # Combine them together
   dat <- merge(fbppr, sim, by=c("query_id","id","label"))
   dat <- merge(dat, salsa, by=c("query_id","id","label"))
+  dat <- merge(dat, aa, by=c("query_id","id","label"))
+  #dat <- merge(fbppr, aa, by=c("query_id","id","label")) # COMMENT THIS LATER
   return(dat)
 }
 
 #' Generate formula based on models
 generate_formulas <- function() {
   feature_list <- list(FPPR=c("fppr_score"),
-                    FBPPR=c("fppr_score", "fppr_rank", "bppr_score", "bppr_rank"),
+                    FBPPR=c("fppr_score", "bppr_score"),
                     SIMRANK=c("sim_score"),
-                    PSALSA=c("query_auth_score", "id_auth_score"))
+                    PSALSA=c("id_auth_score"),
+                    AA=c("aa_score")) #c("query_auth_score", "id_auth_score"))
 #                     PSALSA=c("query_auth_score", "query_auth_rank","query_hub_score",
 #                                 "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
   formulas <- NULL
   # Four models in total, FPPR, FBPPR, SIMRANK, and P-SALSA
-  for(i in 1:4) { # Number of models
-    selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA"), i)
+  for(i in 1:5) { # Number of models
+    selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA", "AA"), i)
+#    selected_models <- combn(c("FPPR", "FBPPR", "AA"), i)   
     for(j in 1:dim(selected_models)[2]) { # 4 choose i results
       selected_features <- unique(unlist(feature_list[selected_models[,j]])) # We do not deduplicate here so each model is unique
       formulas <- rbind(formulas, data.frame(formula = paste("label", paste(selected_features, collapse= "+"), sep= "~"),
@@ -65,13 +85,15 @@ generate_columns <- function() {
   feature_list <- list(FPPR=c("fppr_score"),
                        FBPPR=c("fppr_score", "fppr_rank", "bppr_score", "bppr_rank"),
                        SIMRANK=c("sim_score"),
-                       PSALSA=c("query_auth_score", "id_auth_score"))
+                       PSALSA=c("id_auth_score"),
+                       AA=c("aa_score")) #c("query_auth_score", "id_auth_score"))
   #                     PSALSA=c("query_auth_score", "query_auth_rank","query_hub_score",
   #                                 "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
   formulas <- c()
   # Four models in total, FPPR, FBPPR, SIMRANK, and P-SALSA
-  for(i in 1:4) { # Number of models
-    selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA"), i)
+  for(i in 1:5) { # Number of models
+    selected_models <- combn(c("FPPR", "FBPPR", "SIMRANK", "PSALSA", "AA"), i)
+    #selected_models <- combn(c("FPPR", "FBPPR", "AA"), i)
     for(j in 1:dim(selected_models)[2]) { # 4 choose i results
       selected_features <- unique(unlist(feature_list[selected_models[,j]])) # We do not deduplicate here so each model is unique
       tmplist <- list(model = paste(selected_models[,j], collapse="+"),
@@ -145,7 +167,10 @@ logistic <- function(df) {
   
   # Generate 5 fold datasets
   set.seed(233)
-  ind <- sample(1:5, nrow(df), replace = TRUE) 
+  df.true <- df[which(df$label == "T"),]
+  df.false <- df[which(df$label == "F"),]
+  ind.true <- sample(1:5, nrow(df.true), replace = TRUE) 
+  ind.false <- sample(1:5, nrow(df.false), replace= TRUE)
   
   # Do 5 fold on each formula
   result <- NULL
@@ -155,8 +180,8 @@ logistic <- function(df) {
     tmp_result <- NULL
     for(i in 1:5) { # 5 fold
       # Get training and testing datasets
-      dat.train <- df[which(ind != i),]
-      dat.test <- df[which(ind == i),]
+      dat.train <- rbind(df.true[which(ind.true != i),], df.false[which(ind.false != i),])
+      dat.test <- rbind(df.true[which(ind.true == i),], df.false[which(ind.false == i),])
       
       # Train model
       logit <- glm(fla, data = dat.train, family = "binomial")
@@ -195,32 +220,52 @@ roc_data <- function(df) {
 }
 
 #' Plot ROC using a set of data
-plot_roc <- function(roc_res, filename = "./roc") {
+plot_roc <- function(roc_res, filename = "./roc", withaa=T) {
   roc_res <- roc_res$roc
+  roc_res$model <- str_replace(roc_res$model, "FBPPR", "FBS")
+  roc_res$model <- str_replace(roc_res$model, "FPPR", "PPR")
+  roc_res$model <- str_replace(roc_res$model, "SIMRANK", "SimRank")
+  roc_res$model <- str_replace(roc_res$model, "PSALSA", "pSALSA")
+  roc_res$model <- str_replace(roc_res$model, "AA", "Adamic Adar")
   
+  #levels(roc_res$model) <- c("pPR","FBpPR","SimRank","pSALSA", "AA", "AB","AC","AD","BC","BD","CD","ABC","ABD","ACD","BCD","ABCD")
   plot_roc.draw <- function(roc_df, legend.leftpadding=0.6) {
+    if(!withaa) {
+      roc_df <- roc_df[which(roc_df$model != "Adamic Adar"),]
+    }
     g <- ggplot(roc_df, aes(x=fp, y=tp, color=model,
-                            linetype=model)) +
-      geom_line() + geom_abline(slope=1, intercept=0) +
+                            linetype=model, shape=model)) +
+      geom_line(size=1.1) +
+      scale_linetype_manual(values=c("solid", "dashed",  "dotdash", "dotted", "twodash")) +
+      scale_shape_manual(values=c(0,1,2,3,4)) + 
+      #scale_linetype_manual(values=c("solid","dashed","dotted","dotdash", "longdash","twodash")) +
+      geom_abline(size=0.5, slope=1, intercept=0) +
+      #geom_point(position="dodge") +
+      #scale_shape(solid = FALSE) +
       scale_x_continuous(expand=c(0,0)) +
       scale_y_continuous(expand=c(0,0)) +
+      #scale_colour_brewer(palette = "Set1") +
+      #scale_colour_manual(values = cbPalette) +
+      #scale_fill_manual(values = cbPalette) +
+      #scale_color_brewer(palette = "Dark2") +
       ylab("True Positive Rate") +
       xlab("False Positive Rate") +
       theme_classic() +
+      guides(color=guide_legend(override.aes = list(size=0.5))) +
       theme(panel.background = element_rect(colour = "black", size=1),
             legend.justification=c(0,0), legend.position=c(legend.leftpadding,0),
             legend.title=element_blank())
   }
   
   g1 <- plot_roc.draw(roc_res[roc_res$nmodel == 1, ], 0.6)
-  g2 <- plot_roc.draw(roc_res[roc_res$nmodel == 2, ], 0.5)
-  g3 <- plot_roc.draw(roc_res[roc_res$nmodel == 3, ], 0.4)
-  g4 <- plot_roc.draw(roc_res[roc_res$nmodel == 4, ], 0.2)
+  #g2 <- plot_roc.draw(roc_res[roc_res$nmodel == 2, ], 0.5)
+  #g3 <- plot_roc.draw(roc_res[roc_res$nmodel == 3, ], 0.4)
+  #g4 <- plot_roc.draw(roc_res[roc_res$nmodel == 4, ], 0.2)
   
   ggsave(g1, filename = paste(filename, "_nmodel_1.eps", sep = ""), width = 5, height = 5)
-  ggsave(g2, filename = paste(filename, "_nmodel_2.eps", sep = ""), width = 5, height = 5)
-  ggsave(g3, filename = paste(filename, "_nmodel_3.eps", sep = ""), width = 5, height = 5)
-  ggsave(g4, filename = paste(filename, "_nmodel_4.eps", sep = ""), width = 5, height = 5)
+  #ggsave(g2, filename = paste(filename, "_nmodel_2.eps", sep = ""), width = 5, height = 5)
+  #ggsave(g3, filename = paste(filename, "_nmodel_3.eps", sep = ""), width = 5, height = 5)
+  #ggsave(g4, filename = paste(filename, "_nmodel_4.eps", sep = ""), width = 5, height = 5)
 }
 
 #' Draw AUC with different models
@@ -232,15 +277,44 @@ plot_auc <- function(roc_res, filename = "./auc") {
     auc_df$x <- 1 : nrow(auc_df)
     auc_df$ranking <- rank(-as.numeric(auc_df$auc))
     auc_df$nmodel <- as.factor(auc_df$nmodel)
-    g <- ggplot(auc_df, aes(x=x, y=auc, fill=nmodel)) +
-      geom_bar(stat="identity") + 
-      geom_errorbar(aes(ymin=auc - ci, ymax=auc + ci), position = "identity", width=.2, size = 0.2) +
+    levels(auc_df$model) <- c("A","B","C","D","E",
+                              "AB","AC","AD","AE",
+                              "BC","BD","BE",
+                              "CD","CE",
+                              "DE",
+                              "ABC","ABD","ABE",
+                              "ACD","ACE",
+                              "ADE",
+                              "BCD","BCE",
+                              "BDE",
+                              "CDE",
+                              "ABCD","ABCE","ABDE","ACDE","BCDE",
+                              "ABCDE")
+    auc_df$color <- ifelse(grepl("B",auc_df$model), "grey","white")
+    auc_df$model <- ordered(auc_df$model, levels=c("A","B","C","D","E",
+                                                   "AB","AC","AD","AE",
+                                                   "BC","BD","BE",
+                                                   "CD","CE",
+                                                   "DE",
+                                                   "ABC","ABD","ABE",
+                                                   "ACD","ACE",
+                                                   "ADE",
+                                                   "BCD","BCE",
+                                                   "BDE",
+                                                   "CDE",
+                                                   "ABCD","ABCE","ABDE","ACDE","BCDE",
+                                                   "ABCDE"))
+    g <- ggplot(auc_df, aes(x=model, y=auc, fill=color)) +
+      geom_bar(stat="identity", color="black") + 
+      geom_errorbar(aes(ymin=auc - ci, ymax=auc + ci), position = "identity", width=.2, size = 0.2, colour = "black") +
       geom_errorbar(aes(ymin=auc - se, ymax=auc + se), colour = "red", position = "identity", width=.2, size = 0.2) +
-      scale_x_discrete(breaks=auc_df$x, labels=auc_df$model) +
+      #scale_x_discrete(breaks=auc_df$model, labels=auc_df$model) +
+      scale_fill_manual(values = rev(unique(auc_df$color))) +
       coord_cartesian(ylim=c(0.5, 1)) +
       ylab("Area Under ROC") +
       xlab("Models") +
-      scale_colour_brewer(palette="Set1") +
+      #scale_colour_brewer(palette = "Set1") +
+      #scale_colour_manual(values = cbPalette) +
       theme_classic() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.4),
             panel.background = element_rect(colour = "black", size=1),

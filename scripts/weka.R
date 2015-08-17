@@ -41,18 +41,18 @@ WPM("refresh-cache")
 
 # Load data
 load_data <- function() {
-  fbppr.true <- read.csv("/data/bshi/dataset/dblp_citation/true_links.txt", header=FALSE, sep=" ",
+  fbppr.true <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/fbppr.true.csv", header=FALSE, sep=" ",
                          col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))
-  fbppr.false <- read.csv("/data/bshi/dataset/dblp_citation/false_links.txt", header=FALSE, sep=" ",
+  fbppr.false <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/fbppr.false.csv", header=FALSE, sep=" ",
                           col.names=c("query_id","id", "fppr_score", "fppr_rank", "bppr_score", "bppr_rank"))
   fbppr.true$label <- "T"
   fbppr.false$label <- "F"
   
   fbppr <- rbind(fbppr.true, fbppr.false)
   
-  sim.true <- read.csv("/data/bshi/dataset/dblp_citation/simrank.true.csv", header=FALSE, sep=" ",
+  sim.true <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/simrank.true.csv", header=FALSE, sep=" ",
                        col.names=c("query_id", "id", "sim_score"))
-  sim.false <- read.csv("/data/bshi/dataset/dblp_citation/simrank.false.csv", header=FALSE, sep=" ",
+  sim.false <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/simrank.false.csv", header=FALSE, sep=" ",
                         col.names=c("query_id", "id", "sim_score"))
   
   sim.true$label <- "T"
@@ -60,10 +60,10 @@ load_data <- function() {
   
   sim <- rbind(sim.true, sim.false)
   
-  salsa.true <- read.csv("/data/bshi/dataset/dblp_citation/salsa.true.csv", header=FALSE, sep=" ",
+  salsa.true <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/salsa.true.csv", header=FALSE, sep=" ",
                          col.names=c("query_id", "id", "query_auth_score", "query_auth_rank","query_hub_score",
                                      "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
-  salsa.false <- read.csv("/data/bshi/dataset/dblp_citation/salsa.false.csv", header=FALSE, sep=" ",
+  salsa.false <- read.csv("/data/bshi/dataset/dblp_citation/link_prediction/salsa.false.csv", header=FALSE, sep=" ",
                           col.names=c("query_id", "id", "query_auth_score", "query_auth_rank","query_hub_score",
                                       "query_hub_rank","id_auth_score", "id_auth_rank","id_hub_score","id_hub_rank"))
   salsa.true$label <- "T"
@@ -141,7 +141,7 @@ draw <- function(df, measurevar = "areaUnderROC") {
     geom_text(vjust=0.5) +
     geom_hline(yintercept =max(df[, measurevar]), colour = "red", size=.1) +
 #    coord_cartesian(ylim=c(0.98 * min(df[,measurevar]),1)) +
-    coord_cartesian(ylim=c(0.6, 1)) +
+    coord_cartesian(ylim=c(0.5, 1)) +
     scale_x_discrete(breaks=df$x, labels=df$name) +
     scale_colour_brewer(palette="Set1") +
     theme_classic() + 

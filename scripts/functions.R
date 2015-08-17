@@ -18,7 +18,7 @@ fbppr.ap <- function(pred, actual) {
   return(as.double(ap))
 }
 
-fbppr.multiap <- function(pred, actual, .comm) {
+fbppr.dcg <- function(pred, actual, .comm) {
   len <- min(length(pred), length(actual))
   ap <- rep(0.0, len)
   cnt <- 0
@@ -31,7 +31,41 @@ fbppr.multiap <- function(pred, actual, .comm) {
       sum_score <- sum_score + jaccard.score
       cnt <- cnt + 1
     } else {
-      print(pred, actual)
+      #print(pred, actual)
+    }
+    if (cnt == 0) {
+      ap[i] <- 0
+    } else {
+      ap[i] <- sum_score / cnt
+    }
+  }
+  return(as.double(ap))
+}
+
+fbppr.multiap <- function(pred, actual, .comm) {
+  len <- min(10, min(length(pred), length(actual)))
+  ap <- rep(0.0, len)
+  cnt <- 0
+  sum_score <- 0
+  jaccard.score <- 0
+  for (i in 1:len) {
+    pred.comm <- .comm[which(.comm$id == pred[i]), "cluster"]
+    actual.comm <- .comm[which(.comm$id == actual[i]), "cluster"]
+    jaccard.score <- 0
+    if(length(union(pred.comm, actual.comm)) == 0) {
+      print(pred[i])
+      print(actual[i])
+      print("wtf")
+      jaccard.score <- 0
+    } else {
+      jaccard.score <- length(intersect(pred.comm, actual.comm)) / length(union(pred.comm, actual.comm))
+
+    }
+    if (jaccard.score > 0) {
+      sum_score <- sum_score + jaccard.score
+      cnt <- cnt + 1
+    } else {
+      #print(pred, actual)
     }
     if (cnt == 0) {
       ap[i] <- 0
@@ -93,13 +127,16 @@ rank.coeff <- function(rank.df, lbl, query.node, comm, .ap=FALSE) {
       as.double(length(intersect(comm_x, query.comm))) / as.double(length(union(comm_x, query.comm)))
     })
   }
-  tmpres <- data.frame(rep(lbl, length(coeff)), 1:length(coeff), unlist(coeff), "")
+  tmpres <- data.frame(rep(lbl, length(coeff)),
+                       1:length(coeff),
+                       unlist(coeff),
+                       "")
   colnames(tmpres) <- c("label", "rank", "coeff", "title")
   g.df <- rbind(g.df, tmpres)
 }
 
 # Calculate jaccard coefficient
-fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .normalized=FALSE, .ap=FALSE, .multiply=FALSE) {
+fbppr.coeff <- function(fbppr.df, query.node, comm, deg, .by=1, .interval=c(), .normalized=FALSE, .ap=FALSE, .multiply=FALSE) {
   # Set step
   interval <- seq(from = 0, to = 1, by = .by)
   if(length(.interval) != 0) {
@@ -145,14 +182,20 @@ fbppr.coeff <- function(fbppr.df, query.node, comm, .by=1, .interval=c(), .norma
   }else {
     for(i in interval) {
       lbl <- paste(expression(lambda),"",i) # get colname
-      score <- i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score # Calc score
-      neworder <- order(i * fbppr.df$fppr_score  + (1-i) * fbppr.df$bppr_score, decreasing = TRUE) # New rank
-      newtitle <- NULL
-      if ("title" %in% colnames(fbppr.df)) {
-        newtitle <- fbppr.df[order(neworder), "title"]  
+      score <- NULL
+      if (abs(i - 1) < 0.001) {
+        score <- fbppr.df$fppr_score
       } else {
-        newtitle <- rep("", dim(fbppr.df)[1])
+        #score <- i *(1 - fbppr.df$fppr_rank/(deg[which(deg$id == query.node$id2),"outd"]+1))  + (1-i) *( 1 - fbppr.df$bppr_rank/(deg[which(deg$id == fbppr.df$id),"ind"]+1)) # Calc score
+        score <- i * fbppr.df$fppr_score + (1-i) * fbppr.df$bppr_score
       }
+      neworder <- order(score, decreasing = TRUE) # New rank
+      newtitle <- ""
+      #if ("title" %in% colnames(fbppr.df)) {
+      #  newtitle <- fbppr.df[order(neworder), "title"]  
+      #} else {
+      #  newtitle <- rep("", dim(fbppr.df)[1])
+      #}
       
       # Calculate jaccard coefficient
       coeff <- NULL
